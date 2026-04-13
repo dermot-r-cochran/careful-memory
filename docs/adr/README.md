@@ -13,11 +13,16 @@ ADRs capture significant design choices, the context that motivated them, and th
 | [ADR-0005](0005-symmetric-decay-toward-prior.md) | Symmetric time-based decay toward the uniform prior | Accepted |
 | [ADR-0006](0006-no-llm-self-reinforcement.md) | Exclusion of LLM inference from evidence types | Accepted |
 | [ADR-0007](0007-append-only-belief-store.md) | Append-only belief store | Accepted |
-| [ADR-0008](0008-in-process-rate-limiting.md) | In-process rate limiting with explicit Redis upgrade path | Accepted |
+| [ADR-0008](0008-in-process-rate-limiting.md) | In-process rate limiting with explicit Redis upgrade path | Superseded by [ADR-0013](0013-distributed-rate-limiting.md) |
 | [ADR-0009](0009-pydantic-v2-domain-models.md) | Pydantic v2 as domain model foundation | Accepted |
 | [ADR-0010](0010-storage-abstraction-sqlite-default.md) | Storage abstraction (MemoryStore ABC) with SQLite default | Accepted |
 | [ADR-0011](0011-inference-time-prompt-injection.md) | Inference-time prompt injection instead of model training | Accepted |
 | [ADR-0012](0012-three-tool-agent-api.md) | Strictly-bounded three-tool agent API (ToolDispatcher) | Accepted |
+| [ADR-0013](0013-distributed-rate-limiting.md) | Distributed rate limiting (Redis) | Accepted |
+| [ADR-0014](0014-context-ownership-validation.md) | Context ownership validation at API boundary | Accepted |
+| [ADR-0015](0015-optimistic-locking.md) | Optimistic locking for concurrent writes | Accepted |
+| [ADR-0016](0016-observability-telemetry.md) | Observability & telemetry (Azure Application Insights) | Accepted |
+| [ADR-0017](0017-sqlalchemy-store.md) | SqlAlchemy production storage | Accepted |
 
 ## Format
 

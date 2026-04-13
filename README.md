@@ -20,6 +20,7 @@
 - [Azure Deployment](#azure-deployment)
 - [Extension Points](#extension-points)
 - [Development](#development)
+- [Architecture Documentation](#architecture-documentation)
 
 ---
 
@@ -159,8 +160,9 @@ A lower-authority source **cannot** overwrite or reinforce a higher-authority be
 | Guarantee | Enforcement layer |
 |---|---|
 | Agents cannot write to memory directly | ToolDispatcher — only 3 tools exposed |
+| Caller can only access their own contexts | API-layer context ownership check ([ADR-0014](docs/adr/0014-context-ownership-validation.md)) |
 | Lower-authority evidence rejected | WriteGate (hard rule) |
-| Rate limit: max 10 evidence events / record / hour | WriteGate (in-process; swap for Redis in prod) |
+| Rate limit: max 10 evidence events / record / hour | WriteGate — Redis-backed in production ([ADR-0013](docs/adr/0013-distributed-rate-limiting.md)) |
 | Cross-context reads blocked | Storage query always includes `context_id` |
 | LLM inference alone cannot reinforce memory | `EvidenceType` enum has no `llm_inference` value |
 | Mass contradiction (>25% of active records) rejected | MemoryReviewer |
@@ -168,6 +170,8 @@ A lower-authority source **cannot** overwrite or reinforce a higher-authority be
 | Near-duplicate writes deferred | MemoryReviewer |
 | Summaries are never authoritative | `MemorySummary` is a read-only derived artifact |
 | Belief history is append-only | Contradiction/supersession creates new records; old ones preserved |
+| Concurrent writes do not silently overwrite each other | Optimistic locking with `version` field ([ADR-0015](docs/adr/0015-optimistic-locking.md)) |
+| All gate/reviewer decisions are auditable | Structured telemetry via ObservabilityAdapter ([ADR-0016](docs/adr/0016-observability-telemetry.md)) |
 
 ---
 
@@ -257,6 +261,8 @@ The agent receiving this prompt is grounded in verifiable, decay-adjusted belief
 
 ## Azure Deployment
 
+See the [Deployment Architecture](docs/architecture/deployment-architecture.md) for the full Azure production topology and the [Production Prerequisites Checklist](docs/deployment/production-prerequisites.md) for the complete pre-deployment checklist.
+
 ### Recommended Architecture
 
 ```
@@ -266,10 +272,11 @@ The agent receiving this prompt is grounded in verifiable, decay-adjusted belief
 │  Identity: Azure Managed Identity          │
 └────────────────────┬───────────────────────┘
                      │ connection string (from Key Vault)
-          ┌──────────▼──────────┐
-          │  Azure SQL Database │  (PostgreSQL Flexible Server
-          │  or Cosmos DB       │   or Azure SQL Server)
-          └─────────────────────┘
+          ┌──────────▼──────────┐     ┌──────────────────────┐
+          │  Azure SQL Database │     │  Azure Cache for Redis│
+          │  or PostgreSQL      │     │  (distributed rate    │
+          │  (SqlAlchemyStore)  │     │   limiting, ADR-0013) │
+          └─────────────────────┘     └──────────────────────┘
 ```
 
 ### Environment Variables
@@ -277,6 +284,7 @@ The agent receiving this prompt is grounded in verifiable, decay-adjusted belief
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | SQLAlchemy connection string (from Key Vault) |
+| `REDIS_URL` | Redis TLS connection string for distributed rate limiting (required for multi-replica; see [ADR-0013](docs/adr/0013-distributed-rate-limiting.md)) |
 | `MEMORY_RATE_LIMIT_MAX` | Override default rate limit (default: 10) |
 | `MEMORY_ARCHIVE_THRESHOLD` | Confidence below which records are archived (default: 0.30) |
 
@@ -339,6 +347,30 @@ tests/test_prompt.py            — Inference-time prompt assembly (13 tests)
 tests/test_reviewer.py          — MemoryReviewer decisions (15 tests)
 tests/test_tools.py             — Agent tool dispatch (14 tests)
 ```
+
+---
+
+## Architecture Documentation
+
+Full architecture documentation is in [`docs/architecture/`](docs/architecture/):
+
+- **[System Context (C1)](docs/architecture/system-context.md)** — careful-memory in its operational environment
+- **[Container Diagram (C2)](docs/architecture/container-diagram.md)** — High-level technology choices
+- **[Component Diagrams (C3)](docs/architecture/component-diagrams.md)** — Internal component structure
+- **[Deployment Architecture](docs/architecture/deployment-architecture.md)** — Azure production topology
+- **[Risk Analysis](docs/architecture/risk-analysis.md)** — Architectural risks and mitigations
+
+### Production Readiness ADRs
+
+| ADR | Title | Risk addressed |
+|-----|-------|---------------|
+| [ADR-0013](docs/adr/0013-distributed-rate-limiting.md) | Distributed Rate Limiting (Redis) | Per-replica rate limit bypass in multi-instance deployments |
+| [ADR-0014](docs/adr/0014-context-ownership-validation.md) | Context Ownership Validation | Cross-user context access at API boundary |
+| [ADR-0015](docs/adr/0015-optimistic-locking.md) | Optimistic Locking | Lost writes under concurrent load |
+| [ADR-0016](docs/adr/0016-observability-telemetry.md) | Observability & Telemetry | Invisible gate/reviewer decisions in production |
+| [ADR-0017](docs/adr/0017-sqlalchemy-store.md) | SqlAlchemy Production Storage | SQLite unsuitability for multi-writer deployments |
+
+All ADRs: [`docs/adr/README.md`](docs/adr/README.md)
 
 ---
 
