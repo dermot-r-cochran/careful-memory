@@ -1,7 +1,7 @@
 # ADR-0008: In-Process Rate Limiting with Explicit Redis Upgrade Path
 
 **Date:** 2024-01-01  
-**Status:** Accepted
+**Status:** Superseded by [ADR-0013](0013-distributed-rate-limiting.md)
 
 ---
 
