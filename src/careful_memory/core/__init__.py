@@ -1,6 +1,14 @@
 """Core business-logic package."""
 
 from careful_memory.core import meta_gate
+from careful_memory.core.allocation import (
+    AllocationResult,
+    MemoryItem,
+    SurplusTransfer,
+    allocate,
+    compute_quota,
+    normalise_weights,
+)
 from careful_memory.core.bayesian import (
     BayesianUpdateResult,
     apply_contradicting_evidence,
@@ -23,12 +31,16 @@ from careful_memory.core.gate import GateResult, GateVerdict, WriteGate
 from careful_memory.core.summarizer import build_summary
 
 __all__ = [
+    "AllocationResult",
     "BayesianUpdateResult",
     "ContradictionResult",
     "DecayResult",
     "GateResult",
     "GateVerdict",
+    "MemoryItem",
+    "SurplusTransfer",
     "WriteGate",
+    "allocate",
     "apply_contradiction",
     "apply_contradicting_evidence",
     "apply_decay",
@@ -37,7 +49,9 @@ __all__ = [
     "apply_supporting_evidence",
     "build_summary",
     "compute_decay",
+    "compute_quota",
     "credible_interval",
     "decay_rate_for",
     "meta_gate",
+    "normalise_weights",
 ]

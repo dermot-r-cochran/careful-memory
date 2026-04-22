@@ -8,7 +8,23 @@ Tagline:
    and never hallucinates authority."
 """
 
+from careful_memory.core.allocation import (
+    AllocationResult,
+    MemoryItem,
+    SurplusTransfer,
+    allocate,
+    compute_quota,
+    normalise_weights,
+)
 from careful_memory.service import MemoryService
 
-__all__ = ["MemoryService"]
+__all__ = [
+    "AllocationResult",
+    "MemoryItem",
+    "MemoryService",
+    "SurplusTransfer",
+    "allocate",
+    "compute_quota",
+    "normalise_weights",
+]
 __version__ = "0.1.0"
