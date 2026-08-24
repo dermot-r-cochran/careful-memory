@@ -48,10 +48,12 @@ dependency.
 
 ## Known gaps (candidates for next)
 
-- **No CI.** `ruff` and `mypy` are declared in the dev extra and configured,
-  `pytest-cov` too — none of the three runs anywhere automatically. The
-  sibling `swarm` workflow is the template: pytest on a version matrix, a
-  coverage ratchet at the measured baseline, lint added green.
+- ~~No CI~~ — **closed 2026-08-24**: `.github/workflows/ci.yml` runs pytest
+  on Python 3.11/3.12/3.13 with a coverage ratchet at the measured 91%
+  baseline, plus a `ruff check .` job (already clean, so it arrived green).
+  **mypy stays out deliberately**: it reports 2 findings on the current code,
+  and a permanently red check teaches everyone to ignore checks — the job
+  arrives in the same change that fixes them, per the house rule.
 - The SQL path is exercised via SQLAlchemy against local stores only; a CI
   job against a real database service container would cover dialect
   behaviour the in-process runs cannot.
