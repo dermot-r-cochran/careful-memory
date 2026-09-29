@@ -52,3 +52,32 @@ Mechanics, rationale and extension rules live in `TestingStrategy.md` — read i
 - `docs/architecture/` — C4 diagrams, deployment topology (Azure), risk analysis
 - `docs/deployment/production-prerequisites.md` — pre-deployment checklist
 - `README.md` — mental model, quick start, safety-guarantee table, extension points
+
+## Related repositories
+
+The map of Dermot's public repositories and what crosses between them is
+`RELATED-REPOSITORIES.md` in `dermot-r-cochran/star-rangers`; this section
+names only this repository's own neighbours (added 2026-09-29 at his
+direction). Nothing below shares code or data with this repository; what is
+shared is stated exactly.
+
+- **`dermot-r-cochran/swarm`** (EPISTEME) is the nearest in subject: beliefs
+  with confidence and lifecycle state, evidence validated before it may
+  influence them, an append-only revision history. The two are independent
+  implementations of neighbouring ideas; neither imports the other, and this
+  repository's ADRs bind only here.
+- **`dermot-r-cochran/world-model`** draws the other boundary: it is governed
+  state with causal history, and its ADR-001 says a world model is more than
+  retrieval memory. This repository is the memory system in the account; that
+  one is not. Nothing crosses.
+- **Siblings by convention:** `careful-memory`, `world-model`, `foundation-model`,
+  `shadow-architect`, `visual-llm`, `swarm`, `Voting` and
+  `architecture-definition-model` all carry a `TestingStrategy.md` that keeps
+  testing mechanics apart from the repository's rules; six run CI coverage as a
+  ratchet at the measured baseline (`swarm`, `careful-memory`, `world-model`,
+  `foundation-model`, `shadow-architect`, `visual-llm`); five keep
+  architecture decision records with a guard test each (`swarm`,
+  `careful-memory`, `world-model`, `shadow-architect`, the ADM). When a
+  convention here needs changing, those are the reference for how it is done
+  in the account, and a change to the convention itself is worth landing in
+  all of them or in none.
