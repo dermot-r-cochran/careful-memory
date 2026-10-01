@@ -70,6 +70,10 @@ shared is stated exactly.
   state with causal history, and its ADR-001 says a world model is more than
   retrieval memory. This repository is the memory system in the account; that
   one is not. Nothing crosses.
+- **`dermot-r-cochran/virtual-anthropology`** (The Archipelago) gives its
+  simulated citizens episodic memory and studies memory provenance across a
+  fork. Its memory is an agent's private state inside a simulation, not a
+  write-gated platform service, and nothing crosses (added 2026-10-01).
 - **Siblings by convention:** `careful-memory`, `world-model`, `foundation-model`,
   `shadow-architect`, `visual-llm`, `swarm`, `Voting` and
   `architecture-definition-model` all carry a `TestingStrategy.md` that keeps
