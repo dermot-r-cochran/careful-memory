@@ -47,8 +47,9 @@ Think of careful-memory as a **careful human memory**:
 
 Beliefs are atoms, not rules. An LLM can *propose* a belief. Only the **platform** decides whether to commit it, and it does so only after:
 
-1. The **WriteGate** passes hard rules (authority, rate-limits, context isolation), then
-2. The **MemoryReviewer** applies reasoned judgment (duplication, mass contradiction, policy).
+1. The **MetaGate** passes the proposal's reasoning quality (a documented evidence type), then
+2. The **WriteGate** passes hard rules (authority, rate-limits, context isolation), then
+3. The **MemoryReviewer** applies reasoned judgment (duplication, mass contradiction, policy).
 
 ---
 
@@ -60,6 +61,10 @@ Beliefs are atoms, not rules. An LLM can *propose* a belief. Only the **platform
      │ tool call (propose_belief / report_evidence / query_beliefs)
      ▼
   ToolDispatcher  ◄── only entry point from agents
+     │
+     ├─ Stage 0: MetaGate         ← reasoning-quality gate
+     │     documented evidence type required
+     │     never touches α/β
      │
      ├─ Stage 1: WriteGate        ← hard rules
      │     authority levels
@@ -157,21 +162,23 @@ A lower-authority source **cannot** overwrite or reinforce a higher-authority be
 
 ## Safety Guarantees
 
-| Guarantee | Enforcement layer |
-|---|---|
-| Agents cannot write to memory directly | ToolDispatcher — only 3 tools exposed |
-| Caller can only access their own contexts | API-layer context ownership check ([ADR-0014](docs/adr/0014-context-ownership-validation.md)) |
-| Lower-authority evidence rejected | WriteGate (hard rule) |
-| Rate limit: max 10 evidence events / record / hour | WriteGate — Redis-backed in production ([ADR-0013](docs/adr/0013-distributed-rate-limiting.md)) |
-| Cross-context reads blocked | Storage query always includes `context_id` |
-| LLM inference alone cannot reinforce memory | `EvidenceType` enum has no `llm_inference` value |
-| Mass contradiction (>25% of active records) rejected | MemoryReviewer |
-| Direct high-confidence semantic assertion blocked | MemoryReviewer (modify → episodic, or reject) |
-| Near-duplicate writes deferred | MemoryReviewer |
-| Summaries are never authoritative | `MemorySummary` is a read-only derived artifact |
-| Belief history is append-only | Contradiction/supersession creates new records; old ones preserved |
-| Concurrent writes do not silently overwrite each other | Optimistic locking with `version` field ([ADR-0015](docs/adr/0015-optimistic-locking.md)) |
-| All gate/reviewer decisions are auditable | Structured telemetry via ObservabilityAdapter ([ADR-0016](docs/adr/0016-observability-telemetry.md)) |
+| Guarantee | Enforcement layer | Status |
+|---|---|---|
+| Agents cannot write to memory directly | ToolDispatcher — only 3 tools exposed | in code, `tests/test_tools.py` |
+| Caller can only access their own contexts | API-layer context ownership check ([ADR-0014](docs/adr/0014-context-ownership-validation.md)) | designed, not implemented (R-02) |
+| Lower-authority evidence rejected | WriteGate (hard rule) | in code, `tests/test_poisoning_and_isolation.py` |
+| Rate limit: max 10 evidence events / record / hour | WriteGate — Redis-backed in production ([ADR-0013](docs/adr/0013-distributed-rate-limiting.md)) | in code in-process, `tests/test_gate.py`; Redis-backed: designed, not implemented (R-01) |
+| Cross-context reads blocked | Storage query always includes `context_id` | in code, `tests/test_poisoning_and_isolation.py` |
+| LLM inference alone cannot reinforce memory | `EvidenceType` enum has no `llm_inference` value | in code, `tests/test_poisoning_and_isolation.py` |
+| Mass contradiction (>25% of active records) rejected | MemoryReviewer | in code, `tests/test_poisoning_and_isolation.py` |
+| Direct high-confidence semantic assertion blocked | MemoryReviewer (modify → episodic, or reject) | in code, `tests/test_poisoning_and_isolation.py` |
+| Near-duplicate writes deferred | MemoryReviewer | in code, `tests/test_poisoning_and_isolation.py` |
+| Summaries are never authoritative | `MemorySummary` is a read-only derived artifact | in code, `tests/test_prompt.py` |
+| Belief history is append-only | Contradiction/supersession creates new records; old ones preserved | in code, `tests/test_contradiction.py` |
+| Concurrent writes do not silently overwrite each other | Optimistic locking with `version` field ([ADR-0015](docs/adr/0015-optimistic-locking.md)) | designed, not implemented (R-03) |
+| All gate/reviewer decisions are auditable | Structured telemetry via ObservabilityAdapter ([ADR-0016](docs/adr/0016-observability-telemetry.md)) | designed, not implemented (R-04) |
+
+Status names the test file that guards a row, or the row of the [risk register](docs/architecture/risk-analysis.md) that tracks a guarantee still on the roadmap.
 
 ---
 
@@ -281,12 +288,14 @@ See the [Deployment Architecture](docs/architecture/deployment-architecture.md) 
 
 ### Environment Variables
 
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | SQLAlchemy connection string (from Key Vault) |
-| `REDIS_URL` | Redis TLS connection string for distributed rate limiting (required for multi-replica; see [ADR-0013](docs/adr/0013-distributed-rate-limiting.md)) |
-| `MEMORY_RATE_LIMIT_MAX` | Override default rate limit (default: 10) |
-| `MEMORY_ARCHIVE_THRESHOLD` | Confidence below which records are archived (default: 0.30) |
+| Variable | Description | Status |
+|---|---|---|
+| `DATABASE_URL` | SQLAlchemy connection string (from Key Vault) | designed, not implemented (R-05); the store is constructed by the caller |
+| `REDIS_URL` | Redis TLS connection string for distributed rate limiting (required for multi-replica; see [ADR-0013](docs/adr/0013-distributed-rate-limiting.md)) | designed, not implemented (R-01) |
+| `MEMORY_RATE_LIMIT_MAX` | Override default rate limit (default: 10) | designed, not implemented (R-01); the limit is the constant `RATE_LIMIT_MAX_EVENTS` in `core/gate.py` |
+| `MEMORY_ARCHIVE_THRESHOLD` | Confidence below which records are archived (default: 0.30) | not read; the threshold is `ARCHIVE_THRESHOLD` / the `archive_threshold` argument in `core/decay.py` (no risk-register row) |
+
+No code under `src/` reads environment variables yet; the variables above are the deployment design.
 
 ### Key Vault Integration
 
@@ -337,15 +346,19 @@ mypy src
 
 ### Test Coverage
 
+176 tests across 10 files:
+
 ```
+tests/test_allocation.py        — Conserved-mass salience allocation (38 tests)
 tests/test_bayesian.py          — Bayesian update correctness (21 tests)
 tests/test_contradiction.py     — Contradiction / supersession handling (11 tests)
 tests/test_decay.py             — Time decay behaviour (13 tests)
 tests/test_gate.py              — Write-gate rules (15 tests)
+tests/test_meta_gate.py         — MetaGate reasoning-quality gate (17 tests)
 tests/test_poisoning_and_isolation.py — Memory poisoning defences + isolation (18 tests)
 tests/test_prompt.py            — Inference-time prompt assembly (13 tests)
 tests/test_reviewer.py          — MemoryReviewer decisions (15 tests)
-tests/test_tools.py             — Agent tool dispatch (14 tests)
+tests/test_tools.py             — Agent tool dispatch (15 tests)
 ```
 
 ---

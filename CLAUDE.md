@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`careful-memory` is a production-grade long-term memory system for LLM agents: a persistent, per-user belief store with Bayesian confidence updates, time-based decay, and explicit contradiction tracking. All learning happens in memory, not training — it is a write-gated platform service, not an agent-writable database. Python 3.11+, src-layout package under `src/careful_memory/`, Pydantic v2 domain models, SQLAlchemy storage.
+`careful-memory` is a production-grade long-term memory system for LLM agents: a persistent, per-user belief store with Bayesian confidence updates, time-based decay, and explicit contradiction tracking. All learning happens in memory, not training — it is a write-gated platform service, not an agent-writable database. Python 3.11+, src-layout package under `src/careful_memory/`, Pydantic v2 domain models, SQLite storage behind the `MemoryStore` ABC (a SQLAlchemy store is designed in ADR-0017 but not yet written; `sqlalchemy` is a declared dependency nothing imports).
 
 ## Commands
 
@@ -39,6 +39,8 @@ The ADRs in `docs/adr/` (0001–0017, indexed in `docs/adr/README.md`) are the d
 - **Confidence is derived, never assigned (ADR-0001).** No API accepts a confidence value; decay shrinks excess evidence symmetrically toward the prior (ADR-0005), never below α,β = 1.
 - **The three-tool surface is the whole agent API (ADR-0012).** Don't add tools or hand agents raw `MemoryRecord`s with mutable Bayesian fields.
 - **Concurrency and production behaviour**: optimistic locking via `version` (ADR-0015), Redis-backed distributed rate limiting (ADR-0013, superseding 0008), auditable gate/reviewer decisions via telemetry (ADR-0016).
+
+ADR-0013 to ADR-0017 are accepted but not yet in code (no Redis limiter, ownership check, `version` field, telemetry or SQLAlchemy store); the Implemented column in `docs/adr/README.md` and the risk register (R-01 to R-05) track them, and a change must not assume them.
 
 ADRs are immutable once accepted; a changed decision gets a new ADR that supersedes the old one.
 
