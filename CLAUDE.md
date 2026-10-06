@@ -82,8 +82,10 @@ shared is stated exactly.
   testing mechanics apart from the repository's rules; six run CI coverage as a
   ratchet at the measured baseline (`swarm`, `careful-memory`, `world-model`,
   `foundation-model`, `shadow-architect`, `visual-llm`); five keep
-  architecture decision records with a guard test each (`swarm`,
-  `careful-memory`, `world-model`, `shadow-architect`, the ADM). When a
+  architecture decision records (`swarm`, `careful-memory`, `world-model`,
+  `shadow-architect`, the ADM); `swarm` guards three of its four with a named
+  test, `shadow-architect` guards one, and the others say in their own
+  `CLAUDE.md` how far tests reach their decisions. When a
   convention here needs changing, those are the reference for how it is done
   in the account, and a change to the convention itself is worth landing in
   all of them or in none.
