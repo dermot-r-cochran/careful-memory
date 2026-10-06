@@ -54,9 +54,11 @@ dependency.
   **mypy stays out deliberately**: it reports 2 findings on the current code,
   and a permanently red check teaches everyone to ignore checks — the job
   arrives in the same change that fixes them, per the house rule.
-- The SQL path is exercised via SQLAlchemy against local stores only; a CI
-  job against a real database service container would cover dialect
-  behaviour the in-process runs cannot.
+- The storage path is exercised against the in-process SQLite store only
+  (`storage/sqlite.py`); SQLAlchemy is a declared dependency with no store
+  behind it yet (ADR-0017, not implemented). A CI job against a real
+  database service container would cover dialect behaviour the in-process
+  runs cannot.
 - Bayesian update properties (confidence stays in bounds, repeated identical
   evidence converges rather than diverges) are natural `hypothesis`
   generalisations of the existing fixed cases.
