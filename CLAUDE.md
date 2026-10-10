@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`careful-memory` is a production-grade long-term memory system for LLM agents: a persistent, per-user belief store with Bayesian confidence updates, time-based decay, and explicit contradiction tracking. All learning happens in memory, not training — it is a write-gated platform service, not an agent-writable database. Python 3.11+, src-layout package under `src/careful_memory/`, Pydantic v2 domain models, SQLite storage behind the `MemoryStore` ABC (a SQLAlchemy store is designed in ADR-0017 but not yet written; `sqlalchemy` is a declared dependency nothing imports).
+`careful-memory` is a production-grade long-term memory system for LLM agents: a persistent, per-user belief store with Bayesian confidence updates, time-based decay, and explicit contradiction tracking. All learning happens in memory, not training — it is a write-gated platform service, not an agent-writable database. Python 3.11+, src-layout package under `src/careful_memory/`, Pydantic v2 domain models, SQLite storage behind the `MemoryStore` ABC (a SQLAlchemy store is designed in ADR-0017 but not yet written; `sqlalchemy` is a declared dependency nothing imports, kept on purpose since 2026-10-10 as the first step toward that store — don't remove it, and don't treat it as proof the store exists).
 
 ## Commands
 
@@ -17,7 +17,7 @@ ruff check .                # lint (CI job; line-length 100, E501 ignored)
 mypy src                    # type-check, strict mode
 ```
 
-CI (`.github/workflows/ci.yml`) runs pytest with the coverage ratchet on Python 3.11/3.12/3.13 plus `ruff check .`. **mypy is deliberately not a CI job yet** — it has known findings, and the job arrives in the same change that fixes them; don't add the job without the fixes. The `azure` extra (pyodbc, azure-identity) is a deployment concern, never a test dependency.
+CI (`.github/workflows/ci.yml`) runs pytest with the coverage ratchet on Python 3.11/3.12/3.13, `ruff check .`, and `python .github/scripts/check_docs.py` (stdlib only: every relative link in the Markdown resolves, no file has two front-matter blocks, and the test counts the README and `TestingStrategy.md` state match `tests/` — update the numbers in the same change that adds a test). **mypy is deliberately not a CI job yet** — it has known findings, and the job arrives in the same change that fixes them; don't add the job without the fixes. The `azure` extra (pyodbc, azure-identity) is a deployment concern, never a test dependency.
 
 ## Architecture
 

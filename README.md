@@ -40,10 +40,10 @@
 
 Think of careful-memory as a **careful human memory**:
 
-- It is **slow to trust**: new beliefs start with uniform prior confidence (50%).
-- It is **quick to revise**: contradicting evidence moves the Beta distribution immediately.
-- It is **never dogmatic**: it decays beliefs that are no longer reinforced.
-- It **never hallucinates authority**: summaries are clearly marked as derived, confidence-weighted artifacts.
+- It is **slow to trust**: new beliefs start with uniform prior confidence (50%) (`tests/test_bayesian.py::TestInitialConfidence::test_uniform_prior`).
+- It is **quick to revise**: contradicting evidence moves the Beta distribution immediately (`tests/test_bayesian.py::TestContradictingEvidence::test_confidence_decreases`).
+- It is **never dogmatic**: it decays beliefs that are no longer reinforced (`tests/test_decay.py::TestComputeDecay::test_evidence_mass_reduces`).
+- It **never hallucinates authority**: summaries are clearly marked as derived, confidence-weighted artifacts (`tests/test_prompt.py::TestSystemPreamble::test_memory_header_present`).
 
 Beliefs are atoms, not rules. An LLM can *propose* a belief. Only the **platform** decides whether to commit it, and it does so only after:
 
@@ -148,7 +148,7 @@ Confidence is **always derived** — never directly written. The write gate reje
 | `semantic` | 0.5% / day | ~139 days |
 | `procedural` | 1% / day | ~69 days |
 
-Project-domain memories decay **2× faster** than other domains.
+Project-domain memories decay **2× faster** than other domains (`tests/test_decay.py::TestDecayRates::test_project_multiplier_applied`).
 
 ### Authority Levels
 
@@ -164,21 +164,21 @@ A lower-authority source **cannot** overwrite or reinforce a higher-authority be
 
 | Guarantee | Enforcement layer | Status |
 |---|---|---|
-| Agents cannot write to memory directly | ToolDispatcher — only 3 tools exposed | in code, `tests/test_tools.py` |
+| Agents cannot write to memory directly | ToolDispatcher — only 3 tools exposed | in code, `tests/test_tools.py::TestProposeBelief::test_platform_decides_not_agent` (no test pins the count of three) |
 | Caller can only access their own contexts | API-layer context ownership check ([ADR-0014](docs/adr/0014-context-ownership-validation.md)) | designed, not implemented (R-02) |
-| Lower-authority evidence rejected | WriteGate (hard rule) | in code, `tests/test_poisoning_and_isolation.py` |
-| Rate limit: max 10 evidence events / record / hour | WriteGate — Redis-backed in production ([ADR-0013](docs/adr/0013-distributed-rate-limiting.md)) | in code in-process, `tests/test_gate.py`; Redis-backed: designed, not implemented (R-01) |
-| Cross-context reads blocked | Storage query always includes `context_id` | in code, `tests/test_poisoning_and_isolation.py` |
-| LLM inference alone cannot reinforce memory | `EvidenceType` enum has no `llm_inference` value | in code, `tests/test_poisoning_and_isolation.py` |
-| Mass contradiction (>25% of active records) rejected | MemoryReviewer | in code, `tests/test_poisoning_and_isolation.py` |
-| Direct high-confidence semantic assertion blocked | MemoryReviewer (modify → episodic, or reject) | in code, `tests/test_poisoning_and_isolation.py` |
-| Near-duplicate writes deferred | MemoryReviewer | in code, `tests/test_poisoning_and_isolation.py` |
-| Summaries are never authoritative | `MemorySummary` is a read-only derived artifact | in code, `tests/test_prompt.py` |
-| Belief history is append-only | Contradiction/supersession creates new records; old ones preserved | in code, `tests/test_contradiction.py` |
+| Lower-authority evidence rejected | WriteGate (hard rule) | in code, `tests/test_poisoning_and_isolation.py::TestAuthorityEnforcement::test_lower_authority_cannot_update_higher` |
+| Rate limit: max 10 evidence events / record / hour | WriteGate — Redis-backed in production ([ADR-0013](docs/adr/0013-distributed-rate-limiting.md)) | in code in-process, `tests/test_gate.py::TestEvidenceUpdate::test_rate_limit_enforced`; Redis-backed: designed, not implemented (R-01) |
+| Cross-context reads blocked | Storage query always includes `context_id` | in code, `tests/test_poisoning_and_isolation.py::TestCrossContextIsolation::test_storage_context_isolation` |
+| LLM inference alone cannot reinforce memory | `EvidenceType` enum has no `llm_inference` value | in code, `tests/test_poisoning_and_isolation.py::TestSelfReinforcement::test_no_llm_inference_evidence_type` |
+| Mass contradiction (>25% of active records) rejected | MemoryReviewer | in code, `tests/test_poisoning_and_isolation.py::TestMassContradiction::test_mass_contradiction_rejected_by_reviewer` |
+| Direct high-confidence semantic assertion blocked | MemoryReviewer (modify → episodic, or reject) | in code, `tests/test_poisoning_and_isolation.py::TestDirectSemanticAssertion::test_high_confidence_semantic_downgraded` and `::test_very_high_confidence_semantic_rejected` |
+| Near-duplicate writes deferred | MemoryReviewer | in code, `tests/test_poisoning_and_isolation.py::TestNearDuplicate::test_duplicate_deferred` |
+| Summaries are never authoritative | `MemorySummary` is a read-only derived artifact | in code, `tests/test_prompt.py::TestSystemPreamble::test_memory_header_present` (the block is headed "derived, confidence-weighted") and `tests/test_tools.py::TestQueryBeliefs::test_query_does_not_modify_storage` |
+| Belief history is append-only | Contradiction/supersession creates new records; old ones preserved | in code, `tests/test_contradiction.py::TestApplyContradiction::test_history_is_preserved` |
 | Concurrent writes do not silently overwrite each other | Optimistic locking with `version` field ([ADR-0015](docs/adr/0015-optimistic-locking.md)) | designed, not implemented (R-03) |
 | All gate/reviewer decisions are auditable | Structured telemetry via ObservabilityAdapter ([ADR-0016](docs/adr/0016-observability-telemetry.md)) | designed, not implemented (R-04) |
 
-Status names the test file that guards a row, or the row of the [risk register](docs/architecture/risk-analysis.md) that tracks a guarantee still on the roadmap.
+Status names the test that guards a row (file, class and test name, as `pytest` addresses it), or the row of the [risk register](docs/architecture/risk-analysis.md) that tracks a guarantee still on the roadmap. The convention, from 2026-10-10: a row that claims a capability names its test or says "designed, not implemented".
 
 ---
 
@@ -295,7 +295,7 @@ See the [Deployment Architecture](docs/architecture/deployment-architecture.md) 
 | `MEMORY_RATE_LIMIT_MAX` | Override default rate limit (default: 10) | designed, not implemented (R-01); the limit is the constant `RATE_LIMIT_MAX_EVENTS` in `core/gate.py` |
 | `MEMORY_ARCHIVE_THRESHOLD` | Confidence below which records are archived (default: 0.30) | not read; the threshold is `ARCHIVE_THRESHOLD` / the `archive_threshold` argument in `core/decay.py` (no risk-register row) |
 
-No code under `src/` reads environment variables yet; the variables above are the deployment design.
+No code under `src/` reads environment variables yet; the variables above are the deployment design. In the same spirit, `sqlalchemy>=2.0` is a declared runtime dependency that nothing under `src/` imports: it is kept (decision of 2026-10-10) as the first step toward the `SqlAlchemyStore` of [ADR-0017](docs/adr/0017-sqlalchemy-store.md), which is designed, not implemented (R-05).
 
 ### Key Vault Integration
 
@@ -318,11 +318,11 @@ DATABASE_URL=postgresql+psycopg2://postgres:dev@localhost/careful_memory
 
 | Concern | Extension point |
 |---|---|
-| Production storage | Implement `MemoryStore` ABC; provide `SqlAlchemyStore` |
+| Production storage | Implement `MemoryStore` ABC; provide `SqlAlchemyStore` (designed in [ADR-0017](docs/adr/0017-sqlalchemy-store.md), not yet implemented) |
 | Distributed rate limits | Replace `_RateLimitWindow` in `WriteGate` with Redis-backed store |
-| Custom context policies | Pass `ContextPolicy` to `MemoryReviewer` |
-| Vector embeddings | Populate `MemorySummary.embedding_stub` with any byte-serialised vector |
-| Custom decay rates | Pass `override` to `decay_rate_for()` or set `MemoryRecord.decay_rate` |
+| Custom context policies | Pass `ContextPolicy` to `MemoryReviewer` (`tests/test_poisoning_and_isolation.py::TestContextPolicy::test_policy_min_authority_enforced`) |
+| Vector embeddings | Populate `MemorySummary.embedding_stub` with any byte-serialised vector (a placeholder field; nothing reads it, no test yet) |
+| Custom decay rates | Pass `override` to `decay_rate_for()` (`tests/test_decay.py::TestDecayRates::test_override_respected`) or set `MemoryRecord.decay_rate` (no test yet) |
 | Additional review checks | Add pure functions to `reviewer.py` following the `_check_*` pattern |
 | Observability | Wrap `ToolDispatcher.dispatch()` with Azure Application Insights telemetry |
 

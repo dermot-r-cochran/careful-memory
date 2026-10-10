@@ -24,7 +24,7 @@ ADRs capture significant design choices, the context that motivated them, and th
 | [ADR-0014](0014-context-ownership-validation.md) | Context ownership validation at API boundary | Accepted | not yet (R-02) |
 | [ADR-0015](0015-optimistic-locking.md) | Optimistic locking for concurrent writes | Accepted | not yet (R-03; `MemoryRecord` has no `version` field) |
 | [ADR-0016](0016-observability-telemetry.md) | Observability & telemetry (Azure Application Insights) | Accepted | not yet (R-04) |
-| [ADR-0017](0017-sqlalchemy-store.md) | SqlAlchemy production storage | Accepted | not yet (R-05; `storage/sqlalchemy_store.py` does not exist) |
+| [ADR-0017](0017-sqlalchemy-store.md) | SqlAlchemy production storage | Accepted | not yet (R-05; `storage/sqlalchemy_store.py` does not exist; the `sqlalchemy>=2.0` dependency in `pyproject.toml` is kept as the first step toward it, decided 2026-10-10) |
 
 ## Format
 
