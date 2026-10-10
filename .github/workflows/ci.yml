@@ -73,8 +73,9 @@ jobs:
     # Stdlib-only source check over the Markdown (.github/scripts/check_docs.py):
     # every relative link resolves, no file has two front-matter blocks, and
     # the test counts the README and TestingStrategy.md state match tests/.
-    # Added 2026-10-10 so a README row that cites a test, or a count, cannot
-    # drift from what is on disk without the pull request going red.
+    # Added 2026-10-10 so a link or a stated count cannot drift from what is
+    # on disk without the pull request going red. It does not yet check that a
+    # test the README cites by name still exists.
     name: docs check
     runs-on: ubuntu-latest
     steps:
