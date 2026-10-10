@@ -11,6 +11,9 @@ license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.7,<3",
+    # Nothing under src/ imports sqlalchemy yet. It is kept (decision of
+    # 2026-10-10) as the first step toward the SqlAlchemyStore of ADR-0017,
+    # which is designed, not implemented (risk register R-05).
     "sqlalchemy>=2.0,<3",
     "python-dateutil>=2.9",
 ]

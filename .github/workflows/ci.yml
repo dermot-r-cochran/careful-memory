@@ -68,3 +68,23 @@ jobs:
 
       - name: ruff check
         run: ruff check .
+
+  docs:
+    # Stdlib-only source check over the Markdown (.github/scripts/check_docs.py):
+    # every relative link resolves, no file has two front-matter blocks, and
+    # the test counts the README and TestingStrategy.md state match tests/.
+    # Added 2026-10-10 so a README row that cites a test, or a count, cannot
+    # drift from what is on disk without the pull request going red.
+    name: docs check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check docs
+        run: python .github/scripts/check_docs.py
