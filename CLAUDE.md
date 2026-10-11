@@ -55,6 +55,18 @@ Mechanics, rationale and extension rules live in `TestingStrategy.md` — read i
 - `docs/deployment/production-prerequisites.md` — pre-deployment checklist
 - `README.md` — mental model, quick start, safety-guarantee table, extension points
 
+## Which model does which work
+
+Dermot's direction, 2026-10-11: the account-wide split recorded in `star-rangers`' `CLAUDE.md`, applied here. Opus is the default. Fable is kept for narrative prose and image prompts and has no work in this repository.
+
+- **Haiku: reading and trivial fixes.** Read-only searches, summarising a failing CI log, `check_docs.py` count drift, and simple `ruff` fixes. The coverage gate, `ruff` and the doc check catch its mistakes.
+- **Sonnet: code and tests.** Logic changes and new tests, including tests that raise the coverage ratchet. A test that merely passes is not necessarily one that checks the right thing, which is why this is not Haiku's.
+- **Opus: the protected parts.** `tests/test_poisoning_and_isolation.py` and the ADRs that act as safety invariants (0001, 0004, 0006, 0007, 0012, 0014). No model below Opus edits these, even where a gate would catch the mistake.
+- **Opus reviews and approves** a Haiku or Sonnet subagent's diff, and it merges when CI is green.
+- **Chrome extension:** Opus for anything that signs in, submits or posts; Sonnet for read-only browsing; never Haiku. The extension acts in Dermot's own Chrome with his sign-ins, and a web page can carry text written to steer the model.
+
+A subagent runs on its parent session's model unless the call names another, so name the model on every delegation.
+
 ## Related repositories
 
 The map of Dermot's public repositories and what crosses between them is
