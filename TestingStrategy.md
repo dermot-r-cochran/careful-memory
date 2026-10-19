@@ -20,8 +20,27 @@ and the suite is organised so each has named guards:
   change through is never the fix.
 - The rest of the surface → `test_allocation.py`, `test_prompt.py`,
   `test_tools.py`, and the remaining files, one per module.
+- The README's first promise → `test_service.py::TestQuickStart` reads the
+  `## Quick Start` block out of `README.md` and runs it as printed, so the
+  example a reader meets first is proven by the suite rather than restated
+  by it. The same file covers `MemoryService`'s platform-internal paths
+  (`write_record`, `run_decay`, `build_summary`, `assemble_prompt`), which
+  had no tests before 2026-10-19.
 
-176 tests across 10 files, all verified passing locally on 2026-08-24.
+193 tests across 11 files; 176 verified passing locally on 2026-08-24, the
+17 in `test_service.py` added 2026-10-19 (measured total 95.83%).
+
+## The coverage ratchet, exactly
+
+CI runs `pytest --cov=careful_memory --cov-fail-under=95`. pytest-cov
+compares the total against that figure at coverage's report precision,
+which defaults to 0 decimals: a total of 90.74% rounded to 91 and passed the
+old ratchet of 91 from 2026-10-10 to 2026-10-19, while the same run printed
+`FAIL Required test coverage of 91% not reached`. The CI job was green and
+its log said FAIL. `[tool.coverage.report] precision = 2` in
+`pyproject.toml` makes the comparison exact (95.83 against 95.84 fails,
+verified locally), and the ratchet is set at the floor of the measured
+total, so it can only be passed by coverage that is really there.
 
 ## Running
 

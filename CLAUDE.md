@@ -12,12 +12,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pip install -e ".[dev]"    # editable install — required: src-layout means bare pytest fails on imports
 pytest                      # full suite (config in pyproject.toml: testpaths=["tests"], -v --tb=short)
 pytest tests/test_gate.py   # one file; narrow further with -k <pattern> or ::TestClass::test_name
-pytest --cov=careful_memory --cov-fail-under=91   # what CI runs; the 91% is a ratchet — raise with tests that earn it, never lower
+pytest --cov=careful_memory --cov-fail-under=95   # what CI runs; the 95% is a ratchet — raise with tests that earn it, never lower
 ruff check .                # lint (CI job; line-length 100, E501 ignored)
 mypy src                    # type-check, strict mode
 ```
 
-CI (`.github/workflows/ci.yml`) runs pytest with the coverage ratchet on Python 3.11/3.12/3.13, `ruff check .`, and `python .github/scripts/check_docs.py` (stdlib only: every relative link in the Markdown resolves, no file has two front-matter blocks, and the test counts the README and `TestingStrategy.md` state match `tests/` — update the numbers in the same change that adds a test). **mypy is deliberately not a CI job yet** — it has known findings, and the job arrives in the same change that fixes them; don't add the job without the fixes. The `azure` extra (pyodbc, azure-identity) is a deployment concern, never a test dependency.
+CI (`.github/workflows/ci.yml`) runs pytest with the coverage ratchet on Python 3.11/3.12/3.13, `ruff check .`, and `python .github/scripts/check_docs.py` (stdlib only: every relative link in the Markdown resolves, no file has two front-matter blocks, and the test counts the README and `TestingStrategy.md` state match `tests/` — update the numbers in the same change that adds a test). The ratchet's comparison is exact to two decimals (`[tool.coverage.report] precision = 2` in `pyproject.toml`); at pytest-cov's default precision a total just under the ratchet rounds up and passes while the summary prints FAIL, which is how 90.74% sat green behind a ratchet of 91 from 2026-10-10 to 2026-10-19. **mypy is deliberately not a CI job yet** — it has known findings, and the job arrives in the same change that fixes them; don't add the job without the fixes. The `azure` extra (pyodbc, azure-identity) is a deployment concern, never a test dependency.
 
 ## Architecture
 

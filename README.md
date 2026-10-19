@@ -198,7 +198,8 @@ svc = MemoryService(store=store)
 scope = ContextScope(user_id="alice-uuid", domain=Domain.personal)
 svc.create_context(scope)
 
-# 3. Agent proposes a belief (platform decides)
+# 3. Agent proposes a belief (platform decides). The MetaGate blocks a
+#    proposal with no documented evidence type, so one is always given.
 result = svc.handle_tool_call(ToolCall(
     tool_name=ToolName.propose_belief,
     arguments={
@@ -206,6 +207,7 @@ result = svc.handle_tool_call(ToolCall(
         "subject_type": "person",
         "predicate": "prefers",
         "object_value": "dark mode",
+        "evidence_type": "user_restatement",
     },
     context_id=scope.context_id,
 ))
@@ -229,11 +231,15 @@ prompt = svc.assemble_prompt(
     user_task="What theme should I use?",
 )
 print(prompt.system_prompt)
-# System:
 # You are an assistant that must ground all personalization
 # and long-term assumptions ONLY in the provided memory context.
 # ...
+# Context: Persistent Memory (derived, confidence-weighted)
+# - It is possibly that Alice prefers dark mode.
+# ...
 ```
+
+This block is run as printed by `tests/test_service.py::TestQuickStart::test_readme_quick_start_runs_as_written`, which reads it from this file, so it cannot drift from the code without the pull request going red.
 
 ---
 
@@ -346,7 +352,7 @@ mypy src
 
 ### Test Coverage
 
-176 tests across 10 files:
+193 tests across 11 files:
 
 ```
 tests/test_allocation.py        — Conserved-mass salience allocation (38 tests)
@@ -358,6 +364,7 @@ tests/test_meta_gate.py         — MetaGate reasoning-quality gate (17 tests)
 tests/test_poisoning_and_isolation.py — Memory poisoning defences + isolation (18 tests)
 tests/test_prompt.py            — Inference-time prompt assembly (13 tests)
 tests/test_reviewer.py          — MemoryReviewer decisions (15 tests)
+tests/test_service.py           — MemoryService platform paths + the README Quick Start as printed (17 tests)
 tests/test_tools.py             — Agent tool dispatch (15 tests)
 ```
 
