@@ -49,3 +49,11 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+
+[tool.coverage.report]
+# pytest-cov compares the total with --cov-fail-under at this precision
+# (coverage's should_fail_under). At the default 0 a total of 90.74% rounds
+# to 91 and passes a ratchet of 91 while the summary prints FAIL, which is
+# how CI sat green from 2026-10-10 to 2026-10-19; at 2 the comparison is
+# exact. Same fix as foundation-model, 2026-10-19.
+precision = 2
