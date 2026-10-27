@@ -1,6 +1,6 @@
 """Source check for the repository's Markdown (stdlib only).
 
-Three checks over README.md, CLAUDE.md, TestingStrategy.md and every Markdown
+Four checks over README.md, CLAUDE.md, TestingStrategy.md and every Markdown
 file under docs/, so a docs slip fails the pull request instead of waiting for
 a reader to trip over it:
 
@@ -15,12 +15,21 @@ a reader to trip over it:
    "0001–NNNN" in CLAUDE.md. A test is a `def test_...` line under tests/, which
    is how the suite is written (no parametrize), so the count is the number of
    collected tests.
+4. Every test the docs cite by name exists. The README's safety-guarantee
+   table names its guards as pytest addresses them
+   (`tests/test_gate.py::TestEvidenceUpdate::test_rate_limit_enforced`), and
+   a citation outlives a rename silently: the row still reads as proven while
+   it points at nothing. A citation is `file::Class::test`, `file::Class` or
+   `file::test`, with or without the `tests/` prefix; a bare `::name` later on
+   the same line continues the previous citation's file (and class, when the
+   name is a test). Each is resolved against the `ast` of the file it names.
 
 Run from anywhere: python .github/scripts/check_docs.py
 """
 
 from __future__ import annotations
 
+import ast
 import re
 import sys
 from pathlib import Path
@@ -35,6 +44,7 @@ TEST_DEF = re.compile(r"^\s*def test_", re.MULTILINE)
 SUITE_COUNT = re.compile(r"(\d+) tests across (\d+) files")
 FILE_COUNT = re.compile(r"^(tests/test_\w+\.py)\s.*\((\d+) tests?\)", re.MULTILINE)
 ADR_RANGE = re.compile(r"\b0001[–-](\d{4})\b")
+CITATION = re.compile(r"((?:tests/)?test_\w+\.py)?::(\w+)(?:::(\w+))?")
 
 
 def pages() -> list[Path]:
@@ -115,16 +125,64 @@ def check_counts(errors: list[str]) -> None:
             errors.append(f"CLAUDE.md: says ADRs run to {match.group(1)}; docs/adr/ holds {adrs}")
 
 
+def test_names() -> dict[str, dict[str | None, set[str]]]:
+    """Per test file: class name -> its method names, plus None -> module-level functions."""
+    names: dict[str, dict[str | None, set[str]]] = {}
+    for path in sorted((ROOT / "tests").glob("test_*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        scopes: dict[str | None, set[str]] = {None: set()}
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef):
+                scopes[node.name] = {
+                    sub.name for sub in node.body if isinstance(sub, ast.FunctionDef | ast.AsyncFunctionDef)
+                }
+            elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                scopes[None].add(node.name)
+        names[path.name] = scopes
+    return names
+
+
+def check_citations(page: Path, text: str, names: dict[str, dict[str | None, set[str]]], errors: list[str]) -> None:
+    """Every `file::Class::test` the page cites names a class and test that exist."""
+    rel = page.relative_to(ROOT).as_posix()
+    for number, line in enumerate(text.split("\n"), start=1):
+        file = klass = None
+        for match in CITATION.finditer(line):
+            cited, first, second = match.groups()
+            if cited is not None:
+                file, klass = cited.rsplit("/", 1)[-1], None
+                scope, member = (first, second) if second else (None, first)
+                if scope is None and member in names.get(file, {}):
+                    scope, member = member, None  # `file::Class` cites the class itself
+            elif file is None:
+                continue  # a `::name` with no citation before it on the line is not one
+            else:
+                scope, member = (klass, first) if first.startswith("test_") else (first, None)
+            if scope is not None:
+                klass = scope
+            scopes = names.get(file)
+            if scopes is None:
+                errors.append(f"{rel}:{number}: cites {match.group(0)!r}; tests/{file} does not exist")
+            elif scope not in scopes:
+                errors.append(f"{rel}:{number}: cites {match.group(0)!r}; tests/{file} has no class {scope}")
+            elif member is not None and member not in scopes[scope]:
+                where = f"class {scope}" if scope else "class or module level"
+                errors.append(f"{rel}:{number}: cites {match.group(0)!r}; tests/{file} has no {member} at {where}")
+
+
 def main() -> int:
     errors: list[str] = []
+    names = test_names()
     checked = 0
     for page in pages():
         rel = page.relative_to(ROOT).as_posix()
-        lines = prose_lines(page.read_text(encoding="utf-8").replace("\r\n", "\n"))
+        text = page.read_text(encoding="utf-8").replace("\r\n", "\n")
+        lines = prose_lines(text)
         opens = front_matter_blocks(lines)
         if len(opens) > 1:
             errors.append(f"{rel}: {len(opens)} front-matter blocks (lines {', '.join(map(str, opens))})")
         check_links(page, lines, errors)
+        check_citations(page, text, names, errors)
         checked += 1
     check_counts(errors)
     for error in errors:

@@ -178,7 +178,7 @@ A lower-authority source **cannot** overwrite or reinforce a higher-authority be
 | Concurrent writes do not silently overwrite each other | Optimistic locking with `version` field ([ADR-0015](docs/adr/0015-optimistic-locking.md)) | designed, not implemented (R-03) |
 | All gate/reviewer decisions are auditable | Structured telemetry via ObservabilityAdapter ([ADR-0016](docs/adr/0016-observability-telemetry.md)) | designed, not implemented (R-04) |
 
-Status names the test that guards a row (file, class and test name, as `pytest` addresses it), or the row of the [risk register](docs/architecture/risk-analysis.md) that tracks a guarantee still on the roadmap. The convention, from 2026-10-10: a row that claims a capability names its test or says "designed, not implemented".
+Status names the test that guards a row (file, class and test name, as `pytest` addresses it), or the row of the [risk register](docs/architecture/risk-analysis.md) that tracks a guarantee still on the roadmap. The convention, from 2026-10-10: a row that claims a capability names its test or says "designed, not implemented". Since 2026-10-27 the CI docs check (`.github/scripts/check_docs.py`) resolves every test named here against `tests/`, so a renamed or removed guard fails the pull request rather than leaving its row reading as proven.
 
 ---
 

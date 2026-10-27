@@ -26,6 +26,11 @@ and the suite is organised so each has named guards:
   by it. The same file covers `MemoryService`'s platform-internal paths
   (`write_record`, `run_decay`, `build_summary`, `assemble_prompt`), which
   had no tests before 2026-10-19.
+- The citations themselves → `.github/scripts/check_docs.py` (the CI docs
+  job) resolves every `file::Class::test` named in the README, this file,
+  `CLAUDE.md` and `docs/` against the test files, since 2026-10-27. A guard
+  that is renamed without its citations fails the pull request, so a row in
+  the README's safety table cannot point at a test that no longer exists.
 
 193 tests across 11 files; 176 verified passing locally on 2026-08-24, the
 17 in `test_service.py` added 2026-10-19 (measured total 95.83%).
