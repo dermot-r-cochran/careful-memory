@@ -9,8 +9,9 @@ The product promise is in the tagline: *earns its beliefs, forgets
 responsibly, never hallucinates authority*. Each clause is a testable claim,
 and the suite is organised so each has named guards:
 
-- **Earns its beliefs** → `test_bayesian.py` (confidence updates),
-  `test_contradiction.py` (explicit contradiction tracking),
+- **Earns its beliefs** → `test_bayesian.py` (confidence updates, fixed
+  cases), `test_bayesian_properties.py` (the same rules as properties that
+  hypothesis searches for a counterexample to), `test_contradiction.py` (explicit contradiction tracking),
   `test_reviewer.py` (the review path that admits or rejects candidate
   memories).
 - **Never hallucinates authority** → `test_poisoning_and_isolation.py` — the
@@ -32,8 +33,10 @@ and the suite is organised so each has named guards:
   that is renamed without its citations fails the pull request, so a row in
   the README's safety table cannot point at a test that no longer exists.
 
-193 tests across 11 files; 176 verified passing locally on 2026-08-24, the
-17 in `test_service.py` added 2026-10-19 (measured total 95.83%).
+198 tests across 12 files; 176 verified passing locally on 2026-08-24, the
+17 in `test_service.py` added 2026-10-19 (measured total 95.83%), the 5 in
+`test_bayesian_properties.py` added 2026-10-30 (total unchanged: they search
+branches the fixed cases already reach).
 
 ## The coverage ratchet, exactly
 
@@ -83,6 +86,13 @@ dependency.
   behind it yet (ADR-0017, not implemented). A CI job against a real
   database service container would cover dialect behaviour the in-process
   runs cannot.
-- Bayesian update properties (confidence stays in bounds, repeated identical
-  evidence converges rather than diverges) are natural `hypothesis`
-  generalisations of the existing fixed cases.
+- ~~Bayesian update properties~~ — **closed 2026-10-30**:
+  `tests/test_bayesian_properties.py` states the update rules as properties
+  and lets `hypothesis` (in `[dev]`) search for a counterexample. Support
+  never lowers confidence and contradiction never raises it; repeated
+  identical evidence closes the gap to its limit without crossing it; one
+  event of weight w moves confidence by at most w / (α + β + w) and the
+  result stays in [0, 1]; decay keeps α, β ≥ 1 and never moves confidence
+  further from 0.5 (ADR-0005). `swarm` pins the same two properties for its
+  own Beta-mean confidence (its ADR-0005, which cites this repository's
+  ADR-0001); the test file cites it at a fixed commit, and no code is shared.

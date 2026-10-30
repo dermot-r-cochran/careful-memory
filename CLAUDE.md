@@ -88,16 +88,19 @@ shared is stated exactly.
   simulated citizens episodic memory and studies memory provenance across a
   fork. Its memory is an agent's private state inside a simulation, not a
   write-gated platform service, and nothing crosses (added 2026-10-01).
-- **Siblings by convention:** `careful-memory`, `world-model`, `foundation-model`,
-  `shadow-architect`, `visual-llm`, `swarm`, `Voting` and
-  `architecture-definition-model` all carry a `TestingStrategy.md` that keeps
-  testing mechanics apart from the repository's rules; six run CI coverage as a
-  ratchet at the measured baseline (`swarm`, `careful-memory`, `world-model`,
-  `foundation-model`, `shadow-architect`, `visual-llm`); five keep
-  architecture decision records (`swarm`, `careful-memory`, `world-model`,
-  `shadow-architect`, the ADM); `swarm` guards three of its four with a named
-  test, `shadow-architect` guards one, and the others say in their own
-  `CLAUDE.md` how far tests reach their decisions. When a
+- **Siblings by convention:** the account's engineering repositories share a
+  way of working, not code: a `TestingStrategy.md` that keeps testing
+  mechanics apart from the repository's rules, a CI coverage ratchet at the
+  measured baseline, and architecture decision records guarded by named
+  tests where a repository keeps them. Which repositories follow which, and
+  how far each one's tests reach its decisions, is listed once, in the map's
+  *Siblings by convention* section, and not restated here: counts copied
+  into several files drift (this paragraph said `swarm` guarded "three of
+  its four" ADRs after its fifth guard had landed). `swarm` is also the one
+  repository whose properties a test here cites:
+  `tests/test_bayesian_properties.py` names its ADR-0005 at a fixed commit
+  for the same two properties of a Beta-mean confidence, with no code
+  shared (2026-10-30). When a
   convention here needs changing, those are the reference for how it is done
   in the account, and a change to the convention itself is worth landing in
   all of them or in none.
