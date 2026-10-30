@@ -21,6 +21,7 @@
 - [Extension Points](#extension-points)
 - [Development](#development)
 - [Architecture Documentation](#architecture-documentation)
+- [Related](#related)
 
 ---
 
@@ -352,11 +353,12 @@ mypy src
 
 ### Test Coverage
 
-193 tests across 11 files:
+198 tests across 12 files:
 
 ```
 tests/test_allocation.py        — Conserved-mass salience allocation (38 tests)
 tests/test_bayesian.py          — Bayesian update correctness (21 tests)
+tests/test_bayesian_properties.py — Bayesian update properties, searched by hypothesis (5 tests)
 tests/test_contradiction.py     — Contradiction / supersession handling (11 tests)
 tests/test_decay.py             — Time decay behaviour (13 tests)
 tests/test_gate.py              — Write-gate rules (15 tests)
@@ -391,6 +393,14 @@ Full architecture documentation is in [`docs/architecture/`](docs/architecture/)
 | [ADR-0017](docs/adr/0017-sqlalchemy-store.md) | SqlAlchemy Production Storage | SQLite unsuitability for multi-writer deployments |
 
 All ADRs: [`docs/adr/README.md`](docs/adr/README.md)
+
+---
+
+## Related
+
+- [swarm](https://github.com/dermot-r-cochran/swarm) (EPISTEME) is the nearest in subject: beliefs with derived confidence, evidence-gated revision and an append-only history, implemented independently. Its ADR-0005 follows this repository's Beta(α, β) model, and `tests/test_bayesian_properties.py` here cites the two properties both repositories pin.
+- [world-model](https://github.com/dermot-r-cochran/world-model) draws the other boundary: governed state with causal history, which retrieval memory is not.
+- How these and the author's other public repositories relate is kept in one map: [RELATED-REPOSITORIES.md](https://github.com/dermot-r-cochran/star-rangers/blob/main/RELATED-REPOSITORIES.md).
 
 ---
 
