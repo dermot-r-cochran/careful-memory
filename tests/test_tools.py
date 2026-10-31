@@ -11,10 +11,15 @@ Verifies that:
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
 import pytest
 
+from careful_memory.core.gate import GateResult, WriteGate
 from careful_memory.models.enums import Domain
 from careful_memory.models.memory import ContextScope
+from careful_memory.review.reviewer import MemoryReviewer, ReviewResult
 from careful_memory.service import MemoryService
 from careful_memory.storage.sqlite import SQLiteMemoryStore
 from careful_memory.tools.schema import TOOL_SCHEMAS, ToolCall, ToolName
@@ -47,6 +52,101 @@ class TestToolSchemas:
             assert "name" in schema
             assert "description" in schema
             assert "parameters" in schema
+
+
+def _dict_keys(value: Any) -> set[str]:
+    """Every key in a nested dict/list structure, at any depth."""
+    keys: set[str] = set()
+    if isinstance(value, dict):
+        for k, v in value.items():
+            keys.add(str(k))
+            keys |= _dict_keys(v)
+    elif isinstance(value, list):
+        for item in value:
+            keys |= _dict_keys(item)
+    return keys
+
+
+class TestThreeToolSurface:
+    """
+    ADR-0012: agents reach the memory system through exactly three tools,
+    anything else is refused before the gate or the reviewer is consulted,
+    and what an agent gets back is a serialisable value that never carries
+    the Bayesian counters.
+    """
+
+    THE_THREE = {"propose_belief", "report_evidence", "query_beliefs"}
+
+    def test_exactly_three_tools(self) -> None:
+        assert {name.value for name in ToolName} == self.THE_THREE
+        assert set(TOOL_SCHEMAS) == set(ToolName)
+        assert len(TOOL_SCHEMAS) == 3
+
+    def test_unknown_tool_rejected_before_gate_reviewer_or_write(
+        self, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        consulted: list[str] = []
+
+        class SpyGate(WriteGate):
+            def check_new_record(self, *args: Any, **kwargs: Any) -> GateResult:
+                consulted.append("gate")
+                return super().check_new_record(*args, **kwargs)
+
+            def check_evidence_update(self, *args: Any, **kwargs: Any) -> GateResult:
+                consulted.append("gate")
+                return super().check_evidence_update(*args, **kwargs)
+
+        class SpyReviewer(MemoryReviewer):
+            def review(self, *args: Any, **kwargs: Any) -> ReviewResult:
+                consulted.append("reviewer")
+                return super().review(*args, **kwargs)
+
+        svc = MemoryService(store=store, gate=SpyGate(), reviewer=SpyReviewer())
+        svc.create_context(scope)
+        call = ToolCall(
+            tool_name="delete_record",  # type: ignore[arg-type]  # not a ToolName, on purpose
+            arguments={"record_id": "any"},
+            context_id=scope.context_id,
+        )
+        result = svc.handle_tool_call(call)
+        assert not result.success
+        assert "unknown tool" in result.message
+        assert consulted == []
+        assert store.list_records(scope.context_id, include_inactive=True) == []
+
+    def test_results_carry_no_bayesian_counters(
+        self, svc: MemoryService, scope: ContextScope
+    ) -> None:
+        proposed = svc.handle_tool_call(ToolCall(
+            tool_name=ToolName.propose_belief,
+            arguments={
+                "subject_label": "Alice", "subject_type": "person",
+                "predicate": "likes", "object_value": "tea",
+                "evidence_type": "user_restatement",
+            },
+            context_id=scope.context_id,
+        ))
+        assert proposed.success
+        reported = svc.handle_tool_call(ToolCall(
+            tool_name=ToolName.report_evidence,
+            arguments={
+                "record_id": proposed.data["record_id"],
+                "supports": True,
+                "evidence_type": "user_action",
+            },
+            context_id=scope.context_id,
+        ))
+        assert reported.success
+        queried = svc.handle_tool_call(ToolCall(
+            tool_name=ToolName.query_beliefs,
+            arguments={"min_confidence": 0.0},
+            context_id=scope.context_id,
+        ))
+        assert queried.success and queried.data["count"] == 1
+
+        for result in (proposed, reported, queried):
+            json.dumps(result.data)  # a value type, never a MemoryRecord
+            assert {"alpha", "beta"}.isdisjoint(_dict_keys(result.data))
 
 
 class TestProposeBelief:

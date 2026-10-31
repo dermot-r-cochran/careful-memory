@@ -33,10 +33,14 @@ and the suite is organised so each has named guards:
   that is renamed without its citations fails the pull request, so a row in
   the README's safety table cannot point at a test that no longer exists.
 
-198 tests across 12 files; 176 verified passing locally on 2026-08-24, the
+201 tests across 12 files; 176 verified passing locally on 2026-08-24, the
 17 in `test_service.py` added 2026-10-19 (measured total 95.83%), the 5 in
 `test_bayesian_properties.py` added 2026-10-30 (total unchanged: they search
-branches the fixed cases already reach).
+branches the fixed cases already reach), and the 3 in
+`test_tools.py::TestThreeToolSurface` added 2026-10-31 (ADR-0012: exactly
+three tools, an unknown tool name refused before the gate or reviewer runs,
+no α/β in any result; the unknown-tool refusal in `dispatcher.py` was
+uncovered before, measured total 95.93%).
 
 ## The coverage ratchet, exactly
 
