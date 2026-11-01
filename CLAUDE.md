@@ -57,8 +57,9 @@ Mechanics, rationale and extension rules live in `TestingStrategy.md` — read i
 
 ## Which model does which work
 
-Dermot's direction, 2026-10-11: the account-wide split recorded in `star-rangers`' `CLAUDE.md`, applied here. Opus is the default. Fable is kept for narrative prose and image prompts and has no work in this repository.
+Dermot's direction, 2026-10-11: the account-wide split recorded in `star-rangers`' `CLAUDE.md`, applied here. Opus is the default. Fable is kept for narrative prose and image prompts and has no work in this repository, with one exception: a whole-repo next-improvement read.
 
+- **Fable: whole-repo next-improvement reads.** Fable may read the whole repository and propose its next improvement (the `next-improvement` question); that is reading and proposing, and it widens no one's write reservations, so the protected parts stay Opus's (Dermot, 1 November 2026, "Accept all as recommended").
 - **Haiku: reading and trivial fixes.** Read-only searches, summarising a failing CI log, `check_docs.py` count drift, and simple `ruff` fixes. The coverage gate, `ruff` and the doc check catch its mistakes.
 - **Sonnet: code and tests.** Logic changes and new tests, including tests that raise the coverage ratchet. A test that merely passes is not necessarily one that checks the right thing, which is why this is not Haiku's.
 - **Opus: the protected parts.** `tests/test_poisoning_and_isolation.py` and the ADRs that act as safety invariants (0001, 0004, 0006, 0007, 0012, 0014). No model below Opus edits these, even where a gate would catch the mistake.
