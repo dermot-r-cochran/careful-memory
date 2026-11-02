@@ -54,6 +54,7 @@ from careful_memory.models.enums import (
     RecordStatus,
 )
 from careful_memory.models.memory import (
+    DEFAULT_DECAY_RATES,
     ContextScope,
     EvidenceEvent,
     MemoryRecord,
@@ -585,9 +586,13 @@ class MemoryReviewer:
 
         # Modify: direct semantic assertion → downgrade to episodic.
         if "direct_semantic_assertion" in finding_names:
-            suggested = proposed.model_copy(
-                update={"memory_type": MemoryType.episodic}
-            )
+            # model_copy runs no validators, so the rate goes with the type
+            # here: a rate the record got by default follows it to episodic,
+            # and one set explicitly is kept, as the model keeps it (ADR-0005).
+            update: dict[str, object] = {"memory_type": MemoryType.episodic}
+            if proposed.decay_rate == DEFAULT_DECAY_RATES[proposed.memory_type]:
+                update["decay_rate"] = DEFAULT_DECAY_RATES[MemoryType.episodic]
+            suggested = proposed.model_copy(update=update)
             return _result(
                 ReviewDecision.modify,
                 combined + "; modified: memory_type downgraded to episodic pending promotion",

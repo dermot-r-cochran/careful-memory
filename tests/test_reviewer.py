@@ -6,7 +6,8 @@ Covers:
   - Reject paths (authority, mass contradiction, policy)
   - Defer paths (near-duplicate, insufficient evidence mass)
   - Modify path (direct semantic assertion → downgrade to episodic)
-  - Reviewer never invents data (suggested_record only changes memory_type)
+  - Reviewer never invents data (suggested_record only changes memory_type,
+    and a decay_rate the record got by default follows the new type)
   - ReviewResult.is_committable semantics
 """
 
@@ -14,6 +15,7 @@ from __future__ import annotations
 
 import pytest
 
+from careful_memory.core.decay import DECAY_RATES_BY_TYPE
 from careful_memory.models.enums import AuthorityLevel, Domain, MemoryType
 from careful_memory.models.memory import ContextScope, MemorySource
 from careful_memory.review.reviewer import (
@@ -171,6 +173,31 @@ class TestModify:
         assert s.object_value == proposed.object_value
         assert s.context_id == proposed.context_id
         assert s.subject.label == proposed.subject.label
+
+    def test_downgraded_record_takes_episodic_rate(
+        self, reviewer: MemoryReviewer, scope: ContextScope, user_src: MemorySource
+    ) -> None:
+        """A semantic record at its default rate is episodic at the episodic rate after downgrade."""
+        proposed = make_record(scope, user_src, memory_type=MemoryType.semantic, alpha=3.0, beta=1.0)
+        assert proposed.decay_rate == pytest.approx(DECAY_RATES_BY_TYPE[MemoryType.semantic])
+        result = reviewer.review(proposed, scope, [], [])
+        assert result.suggested_record is not None
+        assert result.suggested_record.memory_type == MemoryType.episodic
+        assert result.suggested_record.decay_rate == pytest.approx(
+            DECAY_RATES_BY_TYPE[MemoryType.episodic]
+        )
+
+    def test_downgraded_record_keeps_explicit_rate(
+        self, reviewer: MemoryReviewer, scope: ContextScope, user_src: MemorySource
+    ) -> None:
+        """A rate set on the record explicitly is not replaced by the downgrade."""
+        proposed = make_record(
+            scope, user_src, memory_type=MemoryType.semantic, alpha=3.0, beta=1.0
+        ).model_copy(update={"decay_rate": 0.2})
+        result = reviewer.review(proposed, scope, [], [])
+        assert result.suggested_record is not None
+        assert result.suggested_record.memory_type == MemoryType.episodic
+        assert result.suggested_record.decay_rate == pytest.approx(0.2)
 
 
 class TestPolicyEnforcement:

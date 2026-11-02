@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pip install -e ".[dev]"    # editable install — required: src-layout means bare pytest fails on imports
 pytest                      # full suite (config in pyproject.toml: testpaths=["tests"], -v --tb=short)
 pytest tests/test_gate.py   # one file; narrow further with -k <pattern> or ::TestClass::test_name
-pytest --cov=careful_memory --cov-fail-under=95   # what CI runs; the 95% is a ratchet — raise with tests that earn it, never lower
+pytest --cov=careful_memory --cov-fail-under=96   # what CI runs; the 96% is a ratchet — raise with tests that earn it, never lower
 ruff check .                # lint (CI job; line-length 100, E501 ignored)
 mypy src                    # type-check, strict mode
 ```

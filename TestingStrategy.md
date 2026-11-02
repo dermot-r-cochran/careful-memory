@@ -33,18 +33,27 @@ and the suite is organised so each has named guards:
   that is renamed without its citations fails the pull request, so a row in
   the README's safety table cannot point at a test that no longer exists.
 
-201 tests across 12 files; 176 verified passing locally on 2026-08-24, the
+210 tests across 12 files; 176 verified passing locally on 2026-08-24, the
 17 in `test_service.py` added 2026-10-19 (measured total 95.83%), the 5 in
 `test_bayesian_properties.py` added 2026-10-30 (total unchanged: they search
 branches the fixed cases already reach), and the 3 in
 `test_tools.py::TestThreeToolSurface` added 2026-10-31 (ADR-0012: exactly
 three tools, an unknown tool name refused before the gate or reviewer runs,
 no α/β in any result; the unknown-tool refusal in `dispatcher.py` was
-uncovered before, measured total 95.93%).
+uncovered before, measured total 95.93%), and the 7 in
+`test_decay.py::TestTypeDefaultDecayRate` added 2026-11-02 (ADR-0005: a
+record built without a `decay_rate` takes its memory type's rate, by
+both write paths; a per-record rate survives storage and is the rate
+decay uses; a record saved with a rate keeps it on reload; an unknown
+memory type is still refused; the README's half-lives follow from the
+rates) with the 2 in `test_reviewer.py::TestModify` for the reviewer's
+downgrade (a default rate follows the record to episodic; an explicit
+one is kept). Before this every record started at 1%/day whatever its
+type; measured total 96.08%, ratchet raised to 96.
 
 ## The coverage ratchet, exactly
 
-CI runs `pytest --cov=careful_memory --cov-fail-under=95`. pytest-cov
+CI runs `pytest --cov=careful_memory --cov-fail-under=96`. pytest-cov
 compares the total against that figure at coverage's report precision,
 which defaults to 0 decimals: a total of 90.74% rounded to 91 and passed the
 old ratchet of 91 from 2026-10-10 to 2026-10-19, while the same run printed
