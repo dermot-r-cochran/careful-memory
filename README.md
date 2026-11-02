@@ -151,6 +151,8 @@ Confidence is **always derived** — never directly written. The write gate reje
 
 Project-domain memories decay **2× faster** than other domains (`tests/test_decay.py::TestDecayRates::test_project_multiplier_applied`).
 
+A record built without an explicit `decay_rate` takes its type's rate from this table, through the agent tool and the platform write path alike (`tests/test_decay.py::TestTypeDefaultDecayRate::test_default_rate_follows_memory_type`, `::test_stored_record_carries_its_type_rate_end_to_end`), so an episodic memory does fade before a semantic one (`::test_episodic_record_forgets_before_semantic`); the half-lives are derived from the rates by `::test_half_life_table_derived_from_rates`, so a changed rate turns this table red. Until 2026-11-02 the model's default was a single 1%/day for every type and this table described a constant nothing read.
+
 ### Authority Levels
 
 ```
@@ -329,7 +331,7 @@ DATABASE_URL=postgresql+psycopg2://postgres:dev@localhost/careful_memory
 | Distributed rate limits | Replace `_RateLimitWindow` in `WriteGate` with Redis-backed store |
 | Custom context policies | Pass `ContextPolicy` to `MemoryReviewer` (`tests/test_poisoning_and_isolation.py::TestContextPolicy::test_policy_min_authority_enforced`) |
 | Vector embeddings | Populate `MemorySummary.embedding_stub` with any byte-serialised vector (a placeholder field; nothing reads it, no test yet) |
-| Custom decay rates | Pass `override` to `decay_rate_for()` (`tests/test_decay.py::TestDecayRates::test_override_respected`) or set `MemoryRecord.decay_rate` (no test yet) |
+| Custom decay rates | Pass `override` to `decay_rate_for()` (`tests/test_decay.py::TestDecayRates::test_override_respected`) or set `MemoryRecord.decay_rate` (`tests/test_decay.py::TestTypeDefaultDecayRate::test_explicit_decay_rate_is_kept_end_to_end`: the value survives storage and is the rate decay uses) |
 | Additional review checks | Add pure functions to `reviewer.py` following the `_check_*` pattern |
 | Observability | Wrap `ToolDispatcher.dispatch()` with Azure Application Insights telemetry |
 
@@ -353,14 +355,14 @@ mypy src
 
 ### Test Coverage
 
-201 tests across 12 files:
+208 tests across 12 files:
 
 ```
 tests/test_allocation.py        — Conserved-mass salience allocation (38 tests)
 tests/test_bayesian.py          — Bayesian update correctness (21 tests)
 tests/test_bayesian_properties.py — Bayesian update properties, searched by hypothesis (5 tests)
 tests/test_contradiction.py     — Contradiction / supersession handling (11 tests)
-tests/test_decay.py             — Time decay behaviour (13 tests)
+tests/test_decay.py             — Time decay behaviour + the per-type default rate of ADR-0005 (20 tests)
 tests/test_gate.py              — Write-gate rules (15 tests)
 tests/test_meta_gate.py         — MetaGate reasoning-quality gate (17 tests)
 tests/test_poisoning_and_isolation.py — Memory poisoning defences + isolation (18 tests)

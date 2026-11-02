@@ -49,12 +49,13 @@ jobs:
       - name: Run tests
         # --cov-fail-under is a ratchet at the measured baseline (91% on
         # 2026-08-24; 95 on 2026-10-19, measured 95.83%, when MemoryService
-        # and the README Quick Start got their tests): raise it with the
+        # and the README Quick Start got their tests; 96 on 2026-11-02,
+        # measured 96.07%, when the per-type decay rate got its tests): raise it with the
         # tests that earn it, never lower it. The comparison is exact to two
         # decimals ([tool.coverage.report] precision in pyproject.toml);
         # before that, 90.74% rounded to 91 and passed while the summary
         # printed FAIL.
-        run: pytest --cov=careful_memory --cov-fail-under=95
+        run: pytest --cov=careful_memory --cov-fail-under=96
 
   lint:
     name: ruff

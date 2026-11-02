@@ -8,7 +8,8 @@ storage layer. Business logic lives in the core modules.
 INVARIANTS enforced here (as validators):
   - confidence is derived from alpha / (alpha + beta); never written directly
   - alpha and beta must always be >= 1.0 (Beta(1,1) prior = uniform)
-  - decay_rate must be in (0.0, 1.0]
+  - decay_rate must be in (0.0, 1.0], and defaults to the record's memory
+    type's rate in DEFAULT_DECAY_RATES when the caller gives none
   - a record may not both contradict AND supersede the same target
 """
 
@@ -115,9 +116,13 @@ class MemorySource(BaseModel):
 # Never go below 1.0 — this preserves the statistical meaning of the Beta.
 _PRIOR_MIN: float = 1.0
 
-# Default decay rates by memory type (fraction of evidence lost per day).
-# These are justified conservative defaults; override per-record or via config.
-_DEFAULT_DECAY_RATES: dict[MemoryType, float] = {
+# Default decay rates by memory type (fraction of excess evidence lost per day).
+# This is the one table (ADR-0005); `core/decay.py` exposes it as
+# DECAY_RATES_BY_TYPE. A record built without an explicit `decay_rate` takes
+# its type's rate here, so an episodic memory fades at 5% a day (~14-day
+# half-life) and a semantic one at 0.5% (~139 days). Override per record by
+# passing `decay_rate`.
+DEFAULT_DECAY_RATES: dict[MemoryType, float] = {
     MemoryType.episodic: 0.05,   # fades relatively quickly
     MemoryType.semantic: 0.005,  # very stable once established
     MemoryType.procedural: 0.01, # moderately stable
@@ -162,9 +167,12 @@ class MemoryRecord(BaseModel):
     alpha: float = Field(default=_PRIOR_MIN, ge=_PRIOR_MIN)
     beta: float = Field(default=_PRIOR_MIN, ge=_PRIOR_MIN)
 
-    # Decay rate: fraction of total evidence lost per day.
-    # Smaller = slower decay.  Must be in (0, 1].
-    decay_rate: float = Field(default=0.01, gt=0.0, le=1.0)
+    # Decay rate: fraction of excess evidence lost per day.
+    # Smaller = slower decay.  Must be in (0, 1].  When the caller gives none,
+    # `_decay_rate_from_type` fills it from DEFAULT_DECAY_RATES for the
+    # record's memory_type, so the declared default is only the episodic
+    # entry restated for the default memory_type.
+    decay_rate: float = Field(default=DEFAULT_DECAY_RATES[MemoryType.episodic], gt=0.0, le=1.0)
 
     # How many distinct external reinforcement events have occurred.
     reinforcement_count: int = Field(default=0, ge=0)
@@ -192,6 +200,25 @@ class MemoryRecord(BaseModel):
     # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
+
+    @model_validator(mode="before")
+    @classmethod
+    def _decay_rate_from_type(cls, data: Any) -> Any:
+        """
+        Fill a missing decay_rate from the record's memory type (ADR-0005).
+
+        Only a record built without one is touched: an explicit value, and a
+        stored record read back with the value it was saved with, are kept
+        as given. An unknown memory_type is left for the field validator to
+        refuse with its own message.
+        """
+        if isinstance(data, dict) and data.get("decay_rate") is None:
+            try:
+                memory_type = MemoryType(data.get("memory_type", MemoryType.episodic))
+            except ValueError:
+                return data
+            data = {**data, "decay_rate": DEFAULT_DECAY_RATES[memory_type]}
+        return data
 
     @field_validator("decay_rate", mode="before")
     @classmethod

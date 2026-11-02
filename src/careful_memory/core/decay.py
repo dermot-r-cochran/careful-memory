@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 
 from careful_memory.core.bayesian import BayesianUpdateResult, apply_decay
 from careful_memory.models.enums import Domain, MemoryType, RecordStatus
-from careful_memory.models.memory import MemoryRecord
+from careful_memory.models.memory import DEFAULT_DECAY_RATES, MemoryRecord
 
 # ---------------------------------------------------------------------------
 # Constants (all justified below)
@@ -30,11 +30,13 @@ from careful_memory.models.memory import MemoryRecord
 # Default decay rates (fraction of excess evidence lost per day).
 # Episodic memories decay the fastest; semantic the slowest.
 # These are conservative baselines — adjust per deployment config.
-DECAY_RATES_BY_TYPE: dict[MemoryType, float] = {
-    MemoryType.episodic: 0.05,    # ~14 days to halve excess evidence
-    MemoryType.semantic: 0.005,   # ~139 days to halve — very stable
-    MemoryType.procedural: 0.01,  # ~69 days to halve
-}
+# The table itself lives on the model (models/memory.py), where a record
+# built without an explicit decay_rate takes its type's entry; this name is
+# the same object, kept so callers of this module keep reading it here:
+#   episodic   0.05   ~14 days to halve excess evidence
+#   semantic   0.005  ~139 days to halve — very stable
+#   procedural 0.01   ~69 days to halve
+DECAY_RATES_BY_TYPE: dict[MemoryType, float] = DEFAULT_DECAY_RATES
 
 # Project-domain multiplier: project memories are transient.
 PROJECT_DOMAIN_MULTIPLIER: float = 2.0

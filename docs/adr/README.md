@@ -12,7 +12,7 @@ ADRs capture significant design choices, the context that motivated them, and th
 | [ADR-0002](0002-spo-triple-as-atomic-belief-unit.md) | Subject-predicate-object triple as atomic belief unit | Accepted | yes |
 | [ADR-0003](0003-three-stage-write-pipeline.md) | Three-stage write pipeline: MetaGate → WriteGate → MemoryReviewer | Accepted | yes |
 | [ADR-0004](0004-context-isolation-via-contextscope.md) | Context isolation via ContextScope | Accepted | yes |
-| [ADR-0005](0005-symmetric-decay-toward-prior.md) | Symmetric time-based decay toward the uniform prior | Accepted | yes (the `MEMORY_ARCHIVE_THRESHOLD` override is not read; the threshold is an argument) |
+| [ADR-0005](0005-symmetric-decay-toward-prior.md) | Symmetric time-based decay toward the uniform prior | Accepted | yes (the `MEMORY_ARCHIVE_THRESHOLD` override is not read; the threshold is an argument; the per-type default rates reached records only from 2026-11-02, before which every record started at 1%/day unless its `decay_rate` was set) |
 | [ADR-0006](0006-no-llm-self-reinforcement.md) | Exclusion of LLM inference from evidence types | Accepted | yes |
 | [ADR-0007](0007-append-only-belief-store.md) | Append-only belief store | Accepted | yes |
 | [ADR-0008](0008-in-process-rate-limiting.md) | In-process rate limiting with explicit Redis upgrade path | Superseded by [ADR-0013](0013-distributed-rate-limiting.md) | yes, and still what runs (the `MEMORY_RATE_LIMIT_MAX` override is not read) |
