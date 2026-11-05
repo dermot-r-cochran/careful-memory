@@ -28,7 +28,7 @@ This document catalogues the architectural risks identified during production re
 | ID | Risk | Current State | Mitigation | Status |
 |----|------|--------------|------------|--------|
 | R-10 | **No end-to-end integration tests**: Unit tests cover individual components; no test exercises the full pipeline against a real database | Unit tests only | Add integration test suite with PostgreSQL container | 🔴 Not implemented |
-| R-11 | **Decay is applied at read time, not stored**: Confidence values in the database do not reflect current decay; queries with confidence thresholds may return stale results | Decay applied in `build_summary()` | Document the design decision; add decay-at-persist option | 🟢 Documented in ADR-0005 |
+| R-11 | **Decay is applied at read time, not stored**: Confidence values in the database do not reflect current decay; queries with confidence thresholds may return stale results | Decay is projected in memory on the read path (`MemoryService.build_summary`/`assemble_prompt` and `query_beliefs`); nothing is persisted but by `run_decay` | Document the design decision; add decay-at-persist option | 🟢 In code as of 2026-11-05, `tests/test_service.py::TestReadPathDecay::test_year_old_record_falls_below_threshold` (ADR-0005) |
 | R-12 | **No runbook for common incidents**: Operators have no documented procedure for rate-limit overrides, data exports, or context deletion | None | Create ops runbook | 🔴 Not implemented |
 | R-13 | **`global` domain is a per-user namespace but could be misunderstood**: Operators might expect `global` to be a shared system namespace | Documented in ADR-0004 | Ensure README and ADR-0004 are clear; add validation | 🟢 Documented in ADR-0004 |
 
@@ -75,7 +75,7 @@ All P0 risks must be resolved before any production traffic:
 
 | ID | Risk | Resolution |
 |----|------|-----------|
-| R-11 | Decay at read-time, not stored | Accepted design (ADR-0005). Documented in ADR and README. No action required. |
+| R-11 | Decay at read-time, not stored | Accepted design (ADR-0005). In code as of 2026-11-05: `tests/test_service.py::TestReadPathDecay::test_projection_persists_nothing` and `tests/test_tools.py::TestQueryBeliefs::test_query_projects_decay_without_persisting`. No action required. |
 | R-13 | `global` domain misunderstanding | Clarified in ADR-0004. |
 
 ## Related Documents

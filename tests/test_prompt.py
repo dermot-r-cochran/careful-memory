@@ -87,7 +87,8 @@ class TestNoMemoryCase:
         self, builder: PromptBuilder, empty_summary: MemorySummary
     ) -> None:
         prompt = builder.build("What do I like?", [empty_summary])
-        assert _NO_MEMORY_PLACEHOLDER.lstrip("- ") in prompt.system_prompt
+        assert _NO_MEMORY_PLACEHOLDER in prompt.system_prompt
+        assert "- - " not in prompt.system_prompt
 
     def test_memory_lines_contains_placeholder(
         self, builder: PromptBuilder, empty_summary: MemorySummary

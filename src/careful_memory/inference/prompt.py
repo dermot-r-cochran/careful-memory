@@ -56,7 +56,7 @@ Instructions:
 """
 
 _NO_MEMORY_PLACEHOLDER = (
-    "- No reliable memories are available for this user context. "
+    "No reliable memories are available for this user context. "
     "Do not make any personalisation assumptions."
 )
 

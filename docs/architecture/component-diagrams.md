@@ -78,7 +78,7 @@ C4Component
       "propose_belief() — routes through write pipeline.\nreport_evidence() — updates alpha/beta counters.\nApplies Bayesian update (ADR-0001) after gate approval.")
 
     Component(belief_reader, "Belief Reader", "Methods on MemoryService",
-      "query_beliefs() — list_active() filtered by confidence threshold.\nbuild_summary() — applies decay, sorts by confidence, builds MemorySummary.")
+      "query_beliefs() — projects decay in memory, filtered by confidence threshold.\nbuild_summary() — projects decay in memory (nothing persisted), sorts by confidence, builds MemorySummary.")
 
     Component(prompt_builder, "PromptBuilder", "Pure function (prompt/builder.py)",
       "build(summary, user_task) — produces AssembledPrompt.\nFormats beliefs as confidence-weighted natural language.\nInjects safety disclaimer.\nNever reads from storage directly.")

@@ -19,7 +19,8 @@ directly.
 
 from __future__ import annotations
 
-from datetime import datetime
+from collections.abc import Callable
+from datetime import UTC, datetime
 
 from careful_memory.core.decay import apply_decay_to_record
 from careful_memory.core.gate import GateResult, WriteGate
@@ -42,6 +43,8 @@ class MemoryService:
     gate     : write-gate instance; shared with ToolDispatcher
     reviewer : memory review agent; shared with ToolDispatcher
     policy   : context-level policy
+    clock    : source of "now" for the read path (defaults to wall time UTC);
+               shared with ToolDispatcher so tests can pin it
     """
 
     def __init__(
@@ -50,16 +53,19 @@ class MemoryService:
         gate: WriteGate | None = None,
         reviewer: MemoryReviewer | None = None,
         policy: ContextPolicy | None = None,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._store = store
         self._gate = gate or WriteGate()
         self._reviewer = reviewer or MemoryReviewer()
         self._policy = policy or ContextPolicy()
+        self._clock: Callable[[], datetime] = clock or (lambda: datetime.now(tz=UTC))
         self._dispatcher = ToolDispatcher(
             store=store,
             gate=self._gate,
             reviewer=self._reviewer,
             policy=self._policy,
+            clock=self._clock,
         )
         self._prompt_builder = PromptBuilder()
 
@@ -160,9 +166,14 @@ class MemoryService:
         context_id: str,
         confidence_threshold: float = 0.6,
         persist: bool = True,
+        as_of: datetime | None = None,
     ) -> MemorySummary:
         """
         Generate a MemorySummary for the context and optionally persist it.
+
+        Decay is projected in memory as of *as_of* (default: the service
+        clock) before summarising, per ADR-0005; the stored records are not
+        touched.  ``run_decay`` is the path that persists decay.
 
         INVARIANT: the summary must never be fed back as evidence.
         """
@@ -170,7 +181,11 @@ class MemoryService:
         if scope is None:
             raise ValueError(f"context {context_id!r} not found")
 
-        records = self._store.list_records(context_id, include_inactive=False)
+        when = as_of if as_of is not None else self._clock()
+        records = [
+            apply_decay_to_record(r, domain=scope.domain, as_of=when, archive_threshold=0.0)
+            for r in self._store.list_records(context_id, include_inactive=False)
+        ]
         summary = build_summary(
             scope=scope,
             records=records,
@@ -186,6 +201,7 @@ class MemoryService:
         context_ids: list[str],
         user_task: str,
         confidence_threshold: float = 0.6,
+        as_of: datetime | None = None,
     ) -> AssembledPrompt:
         """
         Build a memory-grounded system prompt for LLM inference.
@@ -198,7 +214,9 @@ class MemoryService:
         """
         summaries: list[MemorySummary] = []
         for cid in context_ids:
-            summary = self.build_summary(cid, confidence_threshold=confidence_threshold, persist=False)
+            summary = self.build_summary(
+                cid, confidence_threshold=confidence_threshold, persist=False, as_of=as_of
+            )
             summaries.append(summary)
 
         return self._prompt_builder.build(user_task=user_task, summaries=summaries)
