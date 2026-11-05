@@ -21,14 +21,17 @@ INVARIANT: agents never bypass this dispatcher to access storage.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 from careful_memory.core import meta_gate
+from careful_memory.core.decay import apply_decay_to_record
 from careful_memory.core.gate import GateVerdict, WriteGate
 from careful_memory.models.enums import (
     AuthorityLevel,
     EvidenceType,
     MemoryType,
+    RecordStatus,
 )
 from careful_memory.models.memory import (
     ContextScope,
@@ -53,6 +56,9 @@ class ToolDispatcher:
     gate     : the write-gate instance (shared, stateful for rate-limits)
     reviewer : the memory review agent
     policy   : context-level policy applied by the reviewer
+    clock    : source of "now" (defaults to wall time UTC); the read-side
+               decay projection and evidence timestamps use it.  Not
+               reachable from a tool call: an agent cannot choose the time.
     """
 
     def __init__(
@@ -61,11 +67,13 @@ class ToolDispatcher:
         gate: WriteGate | None = None,
         reviewer: MemoryReviewer | None = None,
         policy: ContextPolicy | None = None,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._store = store
         self._gate = gate or WriteGate()
         self._reviewer = reviewer or MemoryReviewer()
         self._policy = policy or ContextPolicy()
+        self._clock: Callable[[], datetime] = clock or (lambda: datetime.now(tz=UTC))
 
     # ------------------------------------------------------------------
     # Public dispatch entry point
@@ -265,7 +273,7 @@ class ToolDispatcher:
             notes=args.get("notes"),
         )
 
-        now = datetime.now(tz=UTC)
+        now = self._clock()
         gate_result = self._gate.check_evidence_update(scope, record, event, now=now)
         if not gate_result.is_allowed:
             return ToolResult(
@@ -309,10 +317,17 @@ class ToolDispatcher:
         memory_type_filter: str | None = args.get("memory_type")
         subject_filter: str | None = args.get("subject_label", "").strip().lower() or None
 
-        records = self._store.list_records(scope.context_id, include_inactive=False)
+        # Project decay in memory (ADR-0005); nothing is persisted here.
+        now = self._clock()
+        records = [
+            apply_decay_to_record(r, domain=scope.domain, as_of=now)
+            for r in self._store.list_records(scope.context_id, include_inactive=False)
+        ]
 
         results = []
         for r in records:
+            if r.status != RecordStatus.active:
+                continue
             if r.confidence < min_confidence:
                 continue
             if memory_type_filter and r.memory_type.value != memory_type_filter:

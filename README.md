@@ -269,7 +269,7 @@ User:
 What editor should I open?
 ```
 
-The agent receiving this prompt is grounded in verifiable, decay-adjusted beliefs. If no memories are available, the placeholder `"No reliable memories are available..."` is injected instead — explicitly signalling the model not to invent.
+The agent receiving this prompt is grounded in verifiable, decay-adjusted beliefs: decay is projected in memory as of the read, persisting nothing, and `run_decay` alone writes it back (ADR-0005; `tests/test_service.py::TestReadPathDecay::test_year_old_record_falls_below_threshold` and `tests/test_tools.py::TestQueryBeliefs::test_query_projects_decay_without_persisting`). If no memories are available, the placeholder `"No reliable memories are available..."` is injected instead — explicitly signalling the model not to invent.
 
 **INVARIANT**: The output of prompt assembly is never fed back into the belief store.
 
@@ -355,7 +355,7 @@ mypy src
 
 ### Test Coverage
 
-210 tests across 12 files:
+216 tests across 12 files:
 
 ```
 tests/test_allocation.py        — Conserved-mass salience allocation (38 tests)
@@ -368,8 +368,8 @@ tests/test_meta_gate.py         — MetaGate reasoning-quality gate (17 tests)
 tests/test_poisoning_and_isolation.py — Memory poisoning defences + isolation (18 tests)
 tests/test_prompt.py            — Inference-time prompt assembly (13 tests)
 tests/test_reviewer.py          — MemoryReviewer decisions (17 tests)
-tests/test_service.py           — MemoryService platform paths + the README Quick Start as printed (17 tests)
-tests/test_tools.py             — Agent tool dispatch + the three-tool surface of ADR-0012 (18 tests)
+tests/test_service.py           — MemoryService platform paths + the README Quick Start as printed (22 tests)
+tests/test_tools.py             — Agent tool dispatch + the three-tool surface of ADR-0012 (19 tests)
 ```
 
 ---

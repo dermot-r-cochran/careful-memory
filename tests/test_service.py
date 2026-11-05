@@ -204,6 +204,79 @@ class TestSummaryAndPrompt:
         assert len(prompt.memory_lines) == 2
 
 
+T0 = datetime(2026, 1, 1, tzinfo=UTC)
+
+
+class TestReadPathDecay:
+    """ADR-0005: decay is projected in memory before a record is read into a
+    summary or prompt; run_decay alone persists it."""
+
+    def _save(
+        self, store: SQLiteMemoryStore, scope: ContextScope, alpha: float, beta: float
+    ) -> str:
+        source = MemorySource(origin="platform", authority_level=AuthorityLevel.system)
+        record = make_record(scope, source, alpha=alpha, beta=beta).model_copy(
+            update={"created_at": T0, "updated_at": T0, "last_decayed_at": T0}
+        )
+        store.save_record(record)
+        return record.id
+
+    def test_no_elapsed_time_leaves_wording_unchanged(
+        self, svc: MemoryService, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        self._save(store, scope, alpha=6.0, beta=1.0)  # 6/7 = 0.857
+        summary = svc.build_summary(scope.context_id, persist=False, as_of=T0)
+        assert "very likely" in summary.text
+
+    def test_thirty_days_weakens_the_wording(
+        self, svc: MemoryService, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        # Episodic rate 0.05/day: 0.95**30 = 0.2146, alpha = 1 + 4 * 0.2146 = 1.858,
+        # confidence = 1.858 / 2.858 = 0.650.
+        self._save(store, scope, alpha=5.0, beta=1.0)
+        summary = svc.build_summary(
+            scope.context_id, persist=False, as_of=T0 + timedelta(days=30)
+        )
+        assert summary.record_count == 1
+        assert "possibly" in summary.text
+        assert "very likely" not in summary.text
+
+    def test_year_old_record_falls_below_threshold(
+        self, svc: MemoryService, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        self._save(store, scope, alpha=19.0, beta=1.0)
+        summary = svc.build_summary(
+            scope.context_id,
+            confidence_threshold=0.6,
+            persist=False,
+            as_of=T0 + timedelta(days=365),
+        )
+        assert summary.record_count == 0
+        assert "No reliable memories" in summary.text
+
+    def test_projection_persists_nothing(
+        self, svc: MemoryService, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        record_id = self._save(store, scope, alpha=19.0, beta=1.0)
+        prompt = svc.assemble_prompt(
+            [scope.context_id], "task", as_of=T0 + timedelta(days=365)
+        )
+        assert prompt.record_count == 0
+        assert "No reliable memories" in prompt.system_prompt
+        stored = svc.get_record(record_id, scope.context_id)
+        assert stored is not None
+        assert stored.alpha == 19.0 and stored.beta == 1.0
+        assert stored.last_decayed_at == T0
+
+    def test_service_clock_is_used_when_as_of_is_absent(
+        self, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        clocked = MemoryService(store=store, clock=lambda: T0 + timedelta(days=365))
+        clocked.create_context(scope)
+        self._save(store, scope, alpha=19.0, beta=1.0)
+        assert clocked.build_summary(scope.context_id, persist=False).record_count == 0
+
+
 class TestLookups:
     def test_get_record_is_scoped_to_context(self, svc: MemoryService, scope: ContextScope) -> None:
         source = MemorySource(origin="platform", authority_level=AuthorityLevel.system)

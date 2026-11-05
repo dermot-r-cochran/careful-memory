@@ -12,17 +12,19 @@ Verifies that:
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
 
 from careful_memory.core.gate import GateResult, WriteGate
-from careful_memory.models.enums import Domain
-from careful_memory.models.memory import ContextScope
+from careful_memory.models.enums import AuthorityLevel, Domain
+from careful_memory.models.memory import ContextScope, MemorySource
 from careful_memory.review.reviewer import MemoryReviewer, ReviewResult
 from careful_memory.service import MemoryService
 from careful_memory.storage.sqlite import SQLiteMemoryStore
 from careful_memory.tools.schema import TOOL_SCHEMAS, ToolCall, ToolName
+from tests.conftest import make_record
 
 
 @pytest.fixture()
@@ -378,6 +380,28 @@ class TestQueryBeliefs:
         )
         result = svc.handle_tool_call(call)
         assert result.success
+
+    def test_query_projects_decay_without_persisting(
+        self, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        t0 = datetime(2026, 1, 1, tzinfo=UTC)
+        svc = MemoryService(store=store, clock=lambda: t0 + timedelta(days=365))
+        svc.create_context(scope)
+        source = MemorySource(origin="platform", authority_level=AuthorityLevel.system)
+        record = make_record(scope, source, alpha=19.0, beta=1.0).model_copy(
+            update={"created_at": t0, "updated_at": t0, "last_decayed_at": t0}
+        )
+        store.save_record(record)
+
+        result = svc.handle_tool_call(ToolCall(
+            tool_name=ToolName.query_beliefs,
+            arguments={"min_confidence": 0.0},
+            context_id=scope.context_id,
+        ))
+
+        assert result.data["count"] == 1
+        assert result.data["beliefs"][0]["confidence"] == 0.5
+        assert store.get_record(record.id, scope.context_id) == record
 
     def test_query_does_not_modify_storage(
         self, svc: MemoryService, scope: ContextScope, store: SQLiteMemoryStore
