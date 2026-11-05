@@ -268,6 +268,14 @@ class TestReadPathDecay:
         assert stored.alpha == 19.0 and stored.beta == 1.0
         assert stored.last_decayed_at == T0
 
+    def test_disbelieved_record_keeps_its_sentence_at_zero_threshold(
+        self, svc: MemoryService, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        self._save(store, scope, alpha=1.0, beta=4.0)  # 0.2: held as disbelieved
+        summary = svc.build_summary(scope.context_id, confidence_threshold=0.0, persist=False, as_of=T0)
+        assert summary.record_count == 1
+        assert "doubtful that" in summary.text
+
     def test_service_clock_is_used_when_as_of_is_absent(
         self, store: SQLiteMemoryStore, scope: ContextScope
     ) -> None:

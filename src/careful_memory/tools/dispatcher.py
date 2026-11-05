@@ -31,7 +31,6 @@ from careful_memory.models.enums import (
     AuthorityLevel,
     EvidenceType,
     MemoryType,
-    RecordStatus,
 )
 from careful_memory.models.memory import (
     ContextScope,
@@ -57,7 +56,7 @@ class ToolDispatcher:
     reviewer : the memory review agent
     policy   : context-level policy applied by the reviewer
     clock    : source of "now" (defaults to wall time UTC); the read-side
-               decay projection and evidence timestamps use it.  Not
+               decay projection uses it.  Not
                reachable from a tool call: an agent cannot choose the time.
     """
 
@@ -273,7 +272,7 @@ class ToolDispatcher:
             notes=args.get("notes"),
         )
 
-        now = self._clock()
+        now = datetime.now(tz=UTC)
         gate_result = self._gate.check_evidence_update(scope, record, event, now=now)
         if not gate_result.is_allowed:
             return ToolResult(
@@ -318,16 +317,15 @@ class ToolDispatcher:
         subject_filter: str | None = args.get("subject_label", "").strip().lower() or None
 
         # Project decay in memory (ADR-0005); nothing is persisted here.
+        # Counters only: status belongs to run_decay, hence archive_threshold=0.0.
         now = self._clock()
         records = [
-            apply_decay_to_record(r, domain=scope.domain, as_of=now)
+            apply_decay_to_record(r, domain=scope.domain, as_of=now, archive_threshold=0.0)
             for r in self._store.list_records(scope.context_id, include_inactive=False)
         ]
 
         results = []
         for r in records:
-            if r.status != RecordStatus.active:
-                continue
             if r.confidence < min_confidence:
                 continue
             if memory_type_filter and r.memory_type.value != memory_type_filter:

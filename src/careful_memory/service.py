@@ -183,7 +183,7 @@ class MemoryService:
 
         when = as_of if as_of is not None else self._clock()
         records = [
-            apply_decay_to_record(r, domain=scope.domain, as_of=when)
+            apply_decay_to_record(r, domain=scope.domain, as_of=when, archive_threshold=0.0)
             for r in self._store.list_records(context_id, include_inactive=False)
         ]
         summary = build_summary(

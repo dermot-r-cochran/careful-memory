@@ -355,7 +355,7 @@ mypy src
 
 ### Test Coverage
 
-216 tests across 12 files:
+218 tests across 12 files:
 
 ```
 tests/test_allocation.py        — Conserved-mass salience allocation (38 tests)
@@ -368,8 +368,8 @@ tests/test_meta_gate.py         — MetaGate reasoning-quality gate (17 tests)
 tests/test_poisoning_and_isolation.py — Memory poisoning defences + isolation (18 tests)
 tests/test_prompt.py            — Inference-time prompt assembly (13 tests)
 tests/test_reviewer.py          — MemoryReviewer decisions (17 tests)
-tests/test_service.py           — MemoryService platform paths + the README Quick Start as printed (22 tests)
-tests/test_tools.py             — Agent tool dispatch + the three-tool surface of ADR-0012 (19 tests)
+tests/test_service.py           — MemoryService platform paths + the README Quick Start as printed (23 tests)
+tests/test_tools.py             — Agent tool dispatch + the three-tool surface of ADR-0012 (20 tests)
 ```
 
 ---

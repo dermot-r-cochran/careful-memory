@@ -403,6 +403,28 @@ class TestQueryBeliefs:
         assert result.data["beliefs"][0]["confidence"] == 0.5
         assert store.get_record(record.id, scope.context_id) == record
 
+    @pytest.mark.parametrize("days", [0, 60])
+    def test_disbelieved_record_stays_visible_and_active(
+        self, store: SQLiteMemoryStore, scope: ContextScope, days: int
+    ) -> None:
+        t0 = datetime(2026, 1, 1, tzinfo=UTC)
+        svc = MemoryService(store=store, clock=lambda: t0 + timedelta(days=days))
+        svc.create_context(scope)
+        source = MemorySource(origin="platform", authority_level=AuthorityLevel.system)
+        record = make_record(scope, source, alpha=1.0, beta=9.0).model_copy(
+            update={"created_at": t0, "updated_at": t0, "last_decayed_at": t0}
+        )
+        store.save_record(record)
+
+        result = svc.handle_tool_call(ToolCall(
+            tool_name=ToolName.query_beliefs,
+            arguments={"min_confidence": 0.0},
+            context_id=scope.context_id,
+        ))
+
+        assert result.data["count"] == 1
+        assert result.data["beliefs"][0]["status"] == "active"
+
     def test_query_does_not_modify_storage(
         self, svc: MemoryService, scope: ContextScope, store: SQLiteMemoryStore
     ) -> None:
