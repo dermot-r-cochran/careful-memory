@@ -33,7 +33,7 @@ and the suite is organised so each has named guards:
   that is renamed without its citations fails the pull request, so a row in
   the README's safety table cannot point at a test that no longer exists.
 
-218 tests across 12 files; 176 verified passing locally on 2026-08-24, the
+222 tests across 12 files; 176 verified passing locally on 2026-08-24, the
 17 in `test_service.py` added 2026-10-19 (measured total 95.83%), the 5 in
 `test_bayesian_properties.py` added 2026-10-30 (total unchanged: they search
 branches the fixed cases already reach), and the 3 in
@@ -53,7 +53,11 @@ type; measured total 96.08%, ratchet raised to 96. The 6 in
 `test_service.py::TestReadPathDecay` and the 2 in
 `test_tools.py::TestQueryBeliefs` added 2026-11-05 (ADR-0005: decay is
 projected in memory on the read path, persisting nothing; measured total
-96.11%, ratchet unchanged).
+96.11%, ratchet unchanged). The 4 in
+`test_tools.py::TestReportEvidence` added 2026-11-06 (ADR-0005: evidence is
+added to counters decayed to now, then `last_decayed_at` is stamped; the
+report and the next query agree; no archiving on the evidence path;
+measured total 96.12%, ratchet unchanged).
 
 ## The coverage ratchet, exactly
 

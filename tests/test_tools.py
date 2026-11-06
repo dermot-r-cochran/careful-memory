@@ -347,6 +347,86 @@ class TestReportEvidence:
         result = svc.handle_tool_call(call)
         assert not result.success
 
+    # -- evidence settles decay first (ADR-0005) --------------------------
+
+    def _aged_service(
+        self, store: SQLiteMemoryStore, scope: ContextScope, days: int, alpha: float, beta: float
+    ) -> tuple[MemoryService, str, datetime]:
+        t0 = datetime(2026, 1, 1, tzinfo=UTC)
+        svc = MemoryService(store=store, clock=lambda: t0 + timedelta(days=days))
+        svc.create_context(scope)
+        source = MemorySource(origin="agent", authority_level=AuthorityLevel.user)
+        record = make_record(scope, source, alpha=alpha, beta=beta).model_copy(
+            update={"created_at": t0, "updated_at": t0, "last_decayed_at": t0}
+        )
+        store.save_record(record)
+        return svc, record.id, t0
+
+    def _support(self, svc: MemoryService, scope: ContextScope, record_id: str) -> Any:
+        return svc.handle_tool_call(ToolCall(
+            tool_name=ToolName.report_evidence,
+            arguments={
+                "record_id": record_id,
+                "supports": True,
+                "evidence_type": "user_action",
+            },
+            context_id=scope.context_id,
+        ))
+
+    def test_evidence_is_added_to_decayed_counters(
+        self, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        svc, record_id, _ = self._aged_service(store, scope, 365, 19.0, 1.0)
+
+        result = self._support(svc, scope, record_id)
+
+        assert result.success
+        assert result.data["new_confidence"] == pytest.approx(2 / 3, abs=1e-4)
+        stored = store.get_record(record_id, scope.context_id)
+        assert stored is not None
+        assert stored.alpha == pytest.approx(2.0, abs=1e-5)
+        assert stored.beta == pytest.approx(1.0, abs=1e-5)
+
+    def test_evidence_moves_last_decayed_at(
+        self, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        svc, record_id, t0 = self._aged_service(store, scope, 365, 19.0, 1.0)
+
+        self._support(svc, scope, record_id)
+
+        stored = store.get_record(record_id, scope.context_id)
+        assert stored is not None
+        assert stored.last_decayed_at == t0 + timedelta(days=365)
+
+    def test_report_and_query_agree_after_evidence(
+        self, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        svc, record_id, _ = self._aged_service(store, scope, 365, 19.0, 1.0)
+
+        result = self._support(svc, scope, record_id)
+        queried = svc.handle_tool_call(ToolCall(
+            tool_name=ToolName.query_beliefs,
+            arguments={"min_confidence": 0.0},
+            context_id=scope.context_id,
+        ))
+
+        assert queried.data["beliefs"][0]["confidence"] == pytest.approx(
+            result.data["new_confidence"], abs=1e-3
+        )
+
+    def test_evidence_does_not_archive(
+        self, store: SQLiteMemoryStore, scope: ContextScope
+    ) -> None:
+        svc, record_id, _ = self._aged_service(store, scope, 0, 1.0, 9.0)
+
+        result = self._support(svc, scope, record_id)
+
+        assert result.success
+        stored = store.get_record(record_id, scope.context_id)
+        assert stored is not None
+        assert stored.status.value == "active"
+        assert (stored.alpha, stored.beta) == (2.0, 9.0)
+
 
 class TestQueryBeliefs:
     def test_empty_context_returns_empty(

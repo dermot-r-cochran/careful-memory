@@ -272,8 +272,14 @@ class ToolDispatcher:
             notes=args.get("notes"),
         )
 
-        now = datetime.now(tz=UTC)
-        gate_result = self._gate.check_evidence_update(scope, record, event, now=now)
+        # Settle decay first (ADR-0005): the observation is added to counters
+        # decayed to now, then last_decayed_at is stamped now. Counters only:
+        # status belongs to run_decay, hence archive_threshold=0.0.
+        now = self._clock()
+        current = apply_decay_to_record(
+            record, domain=scope.domain, as_of=now, archive_threshold=0.0
+        )
+        gate_result = self._gate.check_evidence_update(scope, current, event, now=now)
         if not gate_result.is_allowed:
             return ToolResult(
                 success=False,
@@ -283,12 +289,12 @@ class ToolDispatcher:
 
         # Apply the Bayesian update.
         assert gate_result.bayesian is not None  # guaranteed by gate when allowed
-        updated = record.model_copy(
+        updated = current.model_copy(
             update={
                 "alpha": gate_result.bayesian.new_alpha,
                 "beta": gate_result.bayesian.new_beta,
-                "reinforcement_count": record.reinforcement_count + (1 if supports else 0),
-                "last_reinforced_at": now if supports else record.last_reinforced_at,
+                "reinforcement_count": current.reinforcement_count + (1 if supports else 0),
+                "last_reinforced_at": now if supports else current.last_reinforced_at,
                 "updated_at": now,
             }
         )
@@ -305,7 +311,7 @@ class ToolDispatcher:
             },
             message=(
                 f"evidence {verdict_label}; "
-                f"confidence: {record.confidence:.3f} → "
+                f"confidence: {current.confidence:.3f} → "
                 f"{gate_result.bayesian.new_confidence:.3f}"
             ),
         )
