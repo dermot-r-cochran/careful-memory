@@ -5,11 +5,14 @@ outlier detection, promotion criteria.
 
 from __future__ import annotations
 
+import math
 from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from careful_memory.core.bayesian import OUTLIER_SWING_THRESHOLD
 from careful_memory.core.gate import (
+    OUTLIER_REJECT_THRESHOLD,
     PROMOTION_MIN_DAYS_SPREAD,
     PROMOTION_MIN_REINFORCEMENTS,
     RATE_LIMIT_MAX_EVENTS,
@@ -145,22 +148,58 @@ class TestEvidenceUpdate:
         result = gate.check_evidence_update(scope, r, event)
         assert result.verdict == GateVerdict.rejected
 
+    # The outlier rule, both sides and the bound between them. The gate adds
+    # one observation per event and a record's counters never sit below the
+    # Beta(1,1) prior, so the swing a single event can cause is
+    # (the counter not incremented) / ((a+b)(a+b+1)), largest at (sqrt(2), 1)
+    # or (1, sqrt(2)): 3 - 2*sqrt(2), about 0.172. That is below the flag
+    # threshold (0.25) and the reject threshold (0.50), so neither branch is
+    # reachable from a valid record. They are defence in depth against
+    # counters that reach the gate below the prior, which the model refuses
+    # to build; the two tests after the bound make such records with
+    # model_copy, which skips validation, to show the branches still hold.
+
+    def test_unit_evidence_on_valid_record_never_reaches_outlier_thresholds(
+        self, gate: WriteGate, scope: ContextScope, user_src: MemorySource
+    ) -> None:
+        bound = 3 - 2 * math.sqrt(2)
+        assert bound < OUTLIER_SWING_THRESHOLD < OUTLIER_REJECT_THRESHOLD
+        counters = [1.0, 1.25, math.sqrt(2), 2.0, 5.0, 50.0, 1000.0]
+        for alpha in counters:
+            for beta in counters:
+                for supports in (True, False):
+                    r = make_record(scope, user_src, alpha=alpha, beta=beta)
+                    event = self._make_event(r, scope, user_src, supports=supports)
+                    result = gate.check_evidence_update(scope, r, event)
+                    assert result.verdict == GateVerdict.allowed, (alpha, beta, supports)
+                    assert result.bayesian is not None
+                    assert abs(result.bayesian.delta_confidence) <= bound + 1e-12
+
     def test_outlier_swing_flagged(
         self, gate: WriteGate, scope: ContextScope, user_src: MemorySource
     ) -> None:
-        # α=1, β=1; add weight=5 → swing ≈ 5/6 - 0.5 = 0.333 → flagged
-        # But gate uses weight=1 per event.  α=1,β=1: +1 → 2/3 - 1/2 = 0.167 (< 0.25)
-        # To trigger flag: use a very asymmetric record where +1 support is large
-        # α=1, β=1 → confidence = 0.5.  Weight 100 → swing ≈ 0.49 → flagged by gate
-        # Gate only applies weight=1; the outlier check is in the bayesian layer.
-        # We test the reject threshold (0.5) by using a crafted record.
-        # Record with α=1, β=100 → conf ≈ 0.0099.  Add 1 support: conf ≈ 0.0196; delta ≈ 0.01 (no flag)
-        # Better: α=100, β=1 → conf ≈ 0.99.  Add 1 contradict: conf ≈ 0.99 - tiny.  No flag either.
-        # The real outlier path is REJECT threshold (0.5), not flag (0.25).
-        # With α=1,β=1 → adding 1 support: new_conf = 2/3 ≈ 0.667, delta = 0.167 < 0.25 → no flag.
-        # Flag triggers when 0.25 < delta < 0.50.  We need α=1,β=1 and weight=2: conf=3/4=0.75, delta=0.25 (exact boundary).
-        # Use weight via a manual test on the bayesian layer instead.
-        pass
+        # Beta(0.4, 0.4) + 1 support: 0.5 -> 1.4/1.8, a swing of about 0.278,
+        # between the two thresholds: allowed, and marked as suspicious.
+        r = make_record(scope, user_src).model_copy(update={"alpha": 0.4, "beta": 0.4})
+        event = self._make_event(r, scope, user_src)
+        result = gate.check_evidence_update(scope, r, event)
+        assert result.verdict == GateVerdict.flagged
+        assert result.is_allowed
+        assert "flagged as outlier" in result.reason
+
+    def test_outlier_swing_rejected(
+        self, gate: WriteGate, scope: ContextScope, user_src: MemorySource
+    ) -> None:
+        # Beta(0.001, 0.01) + 1 support: about 0.09 -> 0.99, a swing of about
+        # 0.90, past the hard limit: refused, with the computed update attached.
+        r = make_record(scope, user_src).model_copy(update={"alpha": 0.001, "beta": 0.01})
+        event = self._make_event(r, scope, user_src)
+        result = gate.check_evidence_update(scope, r, event)
+        assert result.verdict == GateVerdict.rejected
+        assert not result.is_allowed
+        assert "outlier rejected" in result.reason
+        assert result.bayesian is not None
+        assert abs(result.bayesian.delta_confidence) >= OUTLIER_REJECT_THRESHOLD
 
     def test_user_action_evidence_allowed(
         self, gate: WriteGate, scope: ContextScope, user_src: MemorySource
