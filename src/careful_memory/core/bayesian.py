@@ -182,7 +182,7 @@ def effective_confidence_after_decay(
 
     Useful for filtering/querying without side effects.
     """
-    factor = (1.0 - decay_rate) ** elapsed_days
+    factor: float = (1.0 - decay_rate) ** elapsed_days
     a = max(_PRIOR_FLOOR + (alpha - _PRIOR_FLOOR) * factor, _PRIOR_FLOOR)
     b = max(_PRIOR_FLOOR + (beta - _PRIOR_FLOOR) * factor, _PRIOR_FLOOR)
     return a / (a + b)
