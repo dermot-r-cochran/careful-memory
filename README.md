@@ -355,7 +355,7 @@ mypy src
 
 ### Test Coverage
 
-222 tests across 12 files:
+224 tests across 12 files:
 
 ```
 tests/test_allocation.py        — Conserved-mass salience allocation (38 tests)
@@ -363,7 +363,7 @@ tests/test_bayesian.py          — Bayesian update correctness (21 tests)
 tests/test_bayesian_properties.py — Bayesian update properties, searched by hypothesis (5 tests)
 tests/test_contradiction.py     — Contradiction / supersession handling (11 tests)
 tests/test_decay.py             — Time decay behaviour + the per-type default rate of ADR-0005 (20 tests)
-tests/test_gate.py              — Write-gate rules (15 tests)
+tests/test_gate.py              — Write-gate rules (17 tests)
 tests/test_meta_gate.py         — MetaGate reasoning-quality gate (17 tests)
 tests/test_poisoning_and_isolation.py — Memory poisoning defences + isolation (18 tests)
 tests/test_prompt.py            — Inference-time prompt assembly (13 tests)

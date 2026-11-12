@@ -33,7 +33,7 @@ and the suite is organised so each has named guards:
   that is renamed without its citations fails the pull request, so a row in
   the README's safety table cannot point at a test that no longer exists.
 
-222 tests across 12 files; 176 verified passing locally on 2026-08-24, the
+224 tests across 12 files; 176 verified passing locally on 2026-08-24, the
 17 in `test_service.py` added 2026-10-19 (measured total 95.83%), the 5 in
 `test_bayesian_properties.py` added 2026-10-30 (total unchanged: they search
 branches the fixed cases already reach), and the 3 in
@@ -57,7 +57,13 @@ projected in memory on the read path, persisting nothing; measured total
 `test_tools.py::TestReportEvidence` added 2026-11-06 (ADR-0005: evidence is
 added to counters decayed to now, then `last_decayed_at` is stamped; the
 report and the next query agree; no archiving on the evidence path;
-measured total 96.12%, ratchet unchanged).
+measured total 96.12%, ratchet unchanged). The 2 added to
+`test_gate.py::TestEvidenceUpdate` on 2026-11-12 for the WriteGate's outlier
+rule, with `test_outlier_swing_flagged` (an empty body until then) filled: one
+observation on a record at or above the Beta(1,1) prior moves confidence by
+at most 3 − 2√2 ≈ 0.172, under both thresholds, so the flag and the
+rejection are defence in depth, exercised with counters below the prior that
+the model refuses to build; measured total 96.31%, ratchet unchanged.
 
 ## The coverage ratchet, exactly
 
