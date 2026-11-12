@@ -349,7 +349,7 @@ pip install -e ".[dev]"
 pytest
 
 # Lint
-ruff check src tests
+ruff check .
 
 # Type-check
 mypy src

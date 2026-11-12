@@ -242,7 +242,7 @@ class MemoryRecord(BaseModel):
     # Derived property
     # ------------------------------------------------------------------
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def confidence(self) -> float:
         """
