@@ -8,6 +8,7 @@ Design goals:
   - Sorted by confidence descending so the LLM sees the strongest beliefs first
   - Only records at or above `confidence_threshold` are included
   - Derived artifact: summaries are NEVER fed back as evidence
+  - One record renders as exactly one line, whatever its text contains
 
 INVARIANT: the output of this module must never be written back into
            the memory store as a MemoryRecord.
@@ -41,6 +42,14 @@ def _confidence_label(confidence: float) -> str:
     return "doubtful that"
 
 
+# A line break inside a belief's text used to become a second memory line in
+# the prompt, under whatever confidence wording the text chose, with no record
+# behind it.  splitlines() is what PromptBuilder.build splits on, so the two
+# agree on what a line break is; other whitespace is left as stored.
+def _one_line(text: str) -> str:
+    return " ".join(text.splitlines())
+
+
 def _record_to_sentence(record: MemoryRecord) -> str:
     """
     Render a MemoryRecord as a single natural-language sentence.
@@ -49,10 +58,11 @@ def _record_to_sentence(record: MemoryRecord) -> str:
     Example: "very likely [user] prefers dark mode"
     """
     label = _confidence_label(record.confidence)
-    subject = record.subject.label
-    predicate = record.predicate
+    subject = _one_line(record.subject.label)
+    predicate = _one_line(record.predicate)
 
     obj = record.object_value if isinstance(record.object_value, str) else record.object_value.label
+    obj = _one_line(obj)
 
     return f"It is {label} that {subject} {predicate} {obj}."
 

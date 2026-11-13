@@ -21,7 +21,7 @@ This document catalogues the architectural risks identified during production re
 | R-06 | **No authentication**: The API layer has no bearer token validation; any caller can submit tool calls | No auth middleware | Implement Azure AD token validation (MSAL) middleware | 🔴 Not implemented |
 | R-07 | **SQLite not safe for multi-writer**: SQLite's write lock serializes all writes; concurrent requests will queue or fail | Single writer by design for dev | Use `SqlAlchemyStore` + Azure SQL for production (ADR-0017) | 🟡 Documented in README; SqlAlchemyStore pending |
 | R-08 | **No database migration tooling**: Schema changes require manual SQL or drop-and-recreate | SQLite only; no migration | Add Alembic migrations for `SqlAlchemyStore` | 🔴 Not implemented |
-| R-09 | **No input sanitisation for `subject_label` / `object_value`**: Free-text fields could contain injection payloads | Pydantic validates types, not content | Add max-length constraints and strip control characters | 🟡 Partial (Pydantic validation) |
+| R-09 | **No input sanitisation for `subject_label` / `object_value`**: Free-text fields could contain injection payloads | Pydantic validates types, not content. Since 2026-11-13 a line break in a belief's text is joined at render, so one record is one memory line (`tests/test_poisoning_and_isolation.py::TestForgedMemoryLine::test_line_break_in_a_belief_cannot_forge_a_memory_line`); length and other control characters are still unchecked | Add max-length constraints and strip control characters | 🟡 Partial (Pydantic validation) |
 
 ### Medium Risks (P2 — Production Hardening)
 

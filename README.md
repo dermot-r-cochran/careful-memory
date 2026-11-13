@@ -177,6 +177,7 @@ A lower-authority source **cannot** overwrite or reinforce a higher-authority be
 | Direct high-confidence semantic assertion blocked | MemoryReviewer (modify → episodic, or reject) | in code, `tests/test_poisoning_and_isolation.py::TestDirectSemanticAssertion::test_high_confidence_semantic_downgraded` and `::test_very_high_confidence_semantic_rejected` |
 | Near-duplicate writes deferred | MemoryReviewer | in code, `tests/test_poisoning_and_isolation.py::TestNearDuplicate::test_duplicate_deferred` |
 | Summaries are never authoritative | `MemorySummary` is a read-only derived artifact | in code, `tests/test_prompt.py::TestSystemPreamble::test_memory_header_present` (the block is headed "derived, confidence-weighted") and `tests/test_tools.py::TestQueryBeliefs::test_query_does_not_modify_storage` |
+| A stored belief renders as exactly one memory line | The summarizer joins any line break inside a belief's subject, predicate or object before the prompt is built | in code, `tests/test_poisoning_and_isolation.py::TestForgedMemoryLine::test_line_break_in_a_belief_cannot_forge_a_memory_line` and `tests/test_poisoning_and_isolation.py::TestForgedMemoryLine::test_any_belief_text_yields_one_line_per_record`; the text inside the line is rendered as stored, and length and other control characters are still unchecked (R-09) |
 | Outlier swings flagged or rejected | WriteGate (hard rule): a confidence swing of 0.25 or more is flagged, 0.50 or more rejected | in code, `tests/test_gate.py::TestEvidenceUpdate::test_outlier_swing_flagged` and `tests/test_gate.py::TestEvidenceUpdate::test_outlier_swing_rejected`; defence in depth only: one observation on a valid record moves confidence by at most 3 − 2√2 ≈ 0.17, so the rule cannot fire from valid input (`tests/test_gate.py::TestEvidenceUpdate::test_unit_evidence_on_valid_record_never_reaches_outlier_thresholds`) |
 | Contradiction, supersession and promotion follow their rules | WriteGate checks and core functions | in code as library functions, not wired: `tests/test_contradiction.py::TestApplyContradiction::test_existing_status_becomes_contradicted`, `tests/test_contradiction.py::TestApplySupersession::test_existing_status_becomes_superseded` and `tests/test_gate.py::TestPromotion::test_eligible_record_approved` exercise them directly, but no service method or tool calls them yet |
 | Belief history is append-only | Contradiction/supersession creates new records; old ones preserved | in code, `tests/test_contradiction.py::TestApplyContradiction::test_history_is_preserved` |
@@ -357,7 +358,7 @@ mypy src
 
 ### Test Coverage
 
-224 tests across 12 files:
+228 tests across 12 files:
 
 ```
 tests/test_allocation.py        — Conserved-mass salience allocation (38 tests)
@@ -367,7 +368,7 @@ tests/test_contradiction.py     — Contradiction / supersession handling (11 te
 tests/test_decay.py             — Time decay behaviour + the per-type default rate of ADR-0005 (20 tests)
 tests/test_gate.py              — Write-gate rules (17 tests)
 tests/test_meta_gate.py         — MetaGate reasoning-quality gate (17 tests)
-tests/test_poisoning_and_isolation.py — Memory poisoning defences + isolation (18 tests)
+tests/test_poisoning_and_isolation.py — Memory poisoning defences + isolation (22 tests)
 tests/test_prompt.py            — Inference-time prompt assembly (13 tests)
 tests/test_reviewer.py          — MemoryReviewer decisions (17 tests)
 tests/test_service.py           — MemoryService platform paths + the README Quick Start as printed (23 tests)
