@@ -33,7 +33,7 @@ and the suite is organised so each has named guards:
   that is renamed without its citations fails the pull request, so a row in
   the README's safety table cannot point at a test that no longer exists.
 
-224 tests across 12 files; 176 verified passing locally on 2026-08-24, the
+228 tests across 12 files; 176 verified passing locally on 2026-08-24, the
 17 in `test_service.py` added 2026-10-19 (measured total 95.83%), the 5 in
 `test_bayesian_properties.py` added 2026-10-30 (total unchanged: they search
 branches the fixed cases already reach), and the 3 in
@@ -63,7 +63,15 @@ rule, with `test_outlier_swing_flagged` (an empty body until then) filled: one
 observation on a record at or above the Beta(1,1) prior moves confidence by
 at most 3 − 2√2 ≈ 0.172, under both thresholds, so the flag and the
 rejection are defence in depth, exercised with counters below the prior that
-the model refuses to build; measured total 96.31%, ratchet unchanged.
+the model refuses to build; measured total 96.31%, ratchet unchanged. The 4
+in `test_poisoning_and_isolation.py::TestForgedMemoryLine` added 2026-11-13:
+a line break inside a belief's subject, predicate or object used to become a
+second memory line in the prompt, under whatever confidence wording the text
+chose, with no record behind it; the summarizer now joins it, so one record
+is one memory line, through the agent tools and for every line break
+`str.splitlines()` recognises, searched by hypothesis over arbitrary text;
+text without a line break renders as before; measured total 96.33%, ratchet
+unchanged.
 
 ## The coverage ratchet, exactly
 
