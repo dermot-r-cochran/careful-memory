@@ -190,6 +190,24 @@ Status names the test that guards a row (file, class and test name, as `pytest` 
 
 ## Quick Start
 
+### Installing
+
+To depend on a release from another project, pin its tag:
+
+```bash
+pip install "careful-memory @ git+https://github.com/dermot-r-cochran/careful-memory@v0.1.0"
+```
+
+or, in that project's `pyproject.toml`:
+
+```toml
+dependencies = ["careful-memory @ git+https://github.com/dermot-r-cochran/careful-memory@v0.1.0"]
+```
+
+No release is tagged yet; the first, `v0.1.0`, is owed. Until it is pushed, put a commit SHA in place of `v0.1.0`.
+
+### Using it
+
 ```python
 from careful_memory import MemoryService
 from careful_memory.models import ContextScope, Domain
