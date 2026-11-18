@@ -4,7 +4,7 @@ Contributions are welcome: bug reports, fixes, tests, documentation and focused 
 
 ## Before you start
 
-- For anything beyond a small fix, open an issue first describing the problem and the change you have in mind, so the approach can be agreed before you spend time on it.
+- For anything beyond a small fix, you may find it useful to open an issue first describing the problem and the change you have in mind, before you spend time on it.
 - Read `docs/adr/` before touching the area a record covers. ADRs 0001, 0004, 0006, 0007, 0012 and 0014 are safety invariants (no model self-reinforcement, an append-only store, context isolation, derived confidence, the three-tool agent surface). A change that needs one undone is proposed as a new ADR.
 - `tests/test_poisoning_and_isolation.py` holds the security guards. A change that weakens one will not be accepted; anything touching isolation or poisoning resistance extends that file.
 
