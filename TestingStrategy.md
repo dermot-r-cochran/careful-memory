@@ -111,11 +111,11 @@ dependency.
 ## Known gaps (candidates for next)
 
 - ~~No CI~~ — **closed 2026-08-24**: `.github/workflows/ci.yml` runs pytest
-  on Python 3.11/3.12/3.13 with a coverage ratchet at the measured 91%
+  on Python 3.11 to 3.15 with a coverage ratchet at the measured 91%
   baseline, plus a `ruff check .` job (already clean, so it arrived green).
   mypy stayed out until **2026-11-12**: it reported 2 findings, and a
   permanently red check teaches everyone to ignore checks, so the `mypy src`
-  job (strict, Python 3.11 and 3.13) arrived in the same change that fixed
+  job (strict, Python 3.11 and 3.15) arrived in the same change that fixed
   them, per the house rule.
 - The storage path is exercised against the in-process SQLite store only
   (`storage/sqlite.py`); SQLAlchemy is a declared dependency with no store
