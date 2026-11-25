@@ -23,7 +23,7 @@ from careful_memory.models.memory import ContextScope, MemorySource
 from careful_memory.review.reviewer import MemoryReviewer, ReviewResult
 from careful_memory.service import MemoryService
 from careful_memory.storage.sqlite import SQLiteMemoryStore
-from careful_memory.tools.schema import TOOL_SCHEMAS, ToolCall, ToolName
+from careful_memory.tools.schema import TOOL_SCHEMAS, ToolCall, ToolName, ToolResult
 from tests.conftest import make_record
 
 
@@ -346,6 +346,105 @@ class TestReportEvidence:
         )
         result = svc.handle_tool_call(call)
         assert not result.success
+
+    @pytest.mark.parametrize(
+        "value",
+        ["false", "true", "no", "0", "", 0, 1, 0.0, None, []],
+        ids=[
+            "str-false", "str-true", "str-no", "str-0", "str-empty",
+            "int-0", "int-1", "float-0", "none", "list-empty",
+        ],
+    )
+    def test_non_boolean_supports_refused_before_gate_or_write(
+        self, store: SQLiteMemoryStore, scope: ContextScope, value: Any
+    ) -> None:
+        # bool() used to read "false" as support and None as contradiction;
+        # ADR-0012: malformed arguments are refused before the gate runs or
+        # the record is read, and the record is left exactly as it was.
+        consulted: list[str] = []
+
+        class SpyGate(WriteGate):
+            def check_evidence_update(self, *args: Any, **kwargs: Any) -> GateResult:
+                consulted.append("gate")
+                return super().check_evidence_update(*args, **kwargs)
+
+        svc = MemoryService(store=store, gate=SpyGate())
+        svc.create_context(scope)
+        record_id = self._create_belief(svc, scope)
+        before = store.get_record(record_id, scope.context_id)
+        assert before is not None
+
+        result = svc.handle_tool_call(
+            ToolCall(
+                tool_name=ToolName.report_evidence,
+                arguments={
+                    "record_id": record_id,
+                    "supports": value,
+                    "evidence_type": "user_restatement",
+                },
+                context_id=scope.context_id,
+            )
+        )
+
+        assert not result.success
+        assert "supports" in result.message
+        assert consulted == []
+        assert store.get_record(record_id, scope.context_id) == before
+
+    def test_boolean_supports_moves_only_its_own_counter(
+        self, svc: MemoryService, scope: ContextScope, store: SQLiteMemoryStore
+    ) -> None:
+        # A fresh record sits at the Beta(1,1) prior, so decay settles nothing
+        # and the counters are exact.
+        def report(record_id: str, supports: bool) -> ToolResult:
+            return svc.handle_tool_call(
+                ToolCall(
+                    tool_name=ToolName.report_evidence,
+                    arguments={
+                        "record_id": record_id,
+                        "supports": supports,
+                        "evidence_type": "user_restatement",
+                    },
+                    context_id=scope.context_id,
+                )
+            )
+
+        # Belief A: supporting evidence moves alpha only.
+        a_id = self._create_belief(svc, scope)
+        support = report(a_id, True)
+        assert support.success
+        assert support.data["delta_confidence"] > 0
+        a = store.get_record(a_id, scope.context_id)
+        assert a is not None
+        assert (a.alpha, a.beta) == (2.0, 1.0)
+        assert a.reinforcement_count == 1
+
+        # Belief B differs from A, or the reviewer defers it as a near-duplicate.
+        proposed = svc.handle_tool_call(
+            ToolCall(
+                tool_name=ToolName.propose_belief,
+                arguments={
+                    "subject_label": "Alice",
+                    "subject_type": "person",
+                    "predicate": "uses",
+                    "object_value": "emacs",
+                    "evidence_type": "user_restatement",
+                },
+                context_id=scope.context_id,
+            )
+        )
+        assert proposed.success
+        b_id = proposed.data["record_id"]
+
+        # Contradicting evidence moves beta only, and reinforces nothing.
+        contradiction = report(b_id, False)
+        assert contradiction.success
+        assert contradiction.data["delta_confidence"] < 0
+        b = store.get_record(b_id, scope.context_id)
+        assert b is not None
+        assert (b.alpha, b.beta) == (1.0, 2.0)
+        assert b.reinforcement_count == 0
+        assert b.last_reinforced_at is None
 
     # -- evidence settles decay first (ADR-0005) --------------------------
 

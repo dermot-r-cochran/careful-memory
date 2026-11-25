@@ -33,7 +33,7 @@ and the suite is organised so each has named guards:
   that is renamed without its citations fails the pull request, so a row in
   the README's safety table cannot point at a test that no longer exists.
 
-228 tests across 12 files; 176 verified passing locally on 2026-08-24, the
+230 tests across 12 files; 176 verified passing locally on 2026-08-24, the
 17 in `test_service.py` added 2026-10-19 (measured total 95.83%), the 5 in
 `test_bayesian_properties.py` added 2026-10-30 (total unchanged: they search
 branches the fixed cases already reach), and the 3 in
@@ -71,7 +71,12 @@ chose, with no record behind it; the summarizer now joins it, so one record
 is one memory line, through the agent tools and for every line break
 `str.splitlines()` recognises, searched by hypothesis over arbitrary text;
 text without a line break renders as before; measured total 96.33%, ratchet
-unchanged.
+unchanged. The 2 in `test_tools.py::TestReportEvidence` added 2026-11-25
+(ADR-0012): `report_evidence` refuses a `supports` that is not a boolean
+before the gate or the record is touched, where `bool()` had read the string
+`"false"` as support and a null as contradiction; and, the first test to
+report contradicting evidence through the tool, each direction moves only
+its own counter; measured total 96.33%, ratchet unchanged.
 
 ## The coverage ratchet, exactly
 
