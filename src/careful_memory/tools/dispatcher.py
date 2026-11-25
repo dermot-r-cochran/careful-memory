@@ -241,7 +241,15 @@ class ToolDispatcher:
         args = call.arguments
         try:
             record_id: str = args["record_id"]
-            supports: bool = bool(args["supports"])
+            supports = args["supports"]
+            # The direction of the evidence is taken as given or not at all:
+            # bool() read the string "false" as support and None as
+            # contradiction.  ADR-0012 refuses malformed arguments before the
+            # gate runs or the record is read.
+            if not isinstance(supports, bool):
+                raise ValueError(
+                    f"supports must be a boolean, true or false; got {type(supports).__name__}"
+                )
             evidence_type = EvidenceType(args["evidence_type"])
         except (KeyError, ValueError) as exc:
             return ToolResult(

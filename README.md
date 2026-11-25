@@ -168,6 +168,7 @@ A lower-authority source **cannot** overwrite or reinforce a higher-authority be
 | Guarantee | Enforcement layer | Status |
 |---|---|---|
 | Agents cannot write to memory directly | ToolDispatcher — only 3 tools exposed | in code, `tests/test_tools.py::TestProposeBelief::test_platform_decides_not_agent`; the count of three, the refusal of any other tool name before the gate or reviewer runs, and the absence of α/β from every result are pinned by `tests/test_tools.py::TestThreeToolSurface::test_exactly_three_tools`, `tests/test_tools.py::TestThreeToolSurface::test_unknown_tool_rejected_before_gate_reviewer_or_write` and `tests/test_tools.py::TestThreeToolSurface::test_results_carry_no_bayesian_counters` (ADR-0012) |
+| The direction of evidence is never guessed | ToolDispatcher: a `report_evidence` call whose `supports` is not a JSON boolean is refused before the gate or the record is touched | in code, `tests/test_tools.py::TestReportEvidence::test_non_boolean_supports_refused_before_gate_or_write`; until 2026-11-25 the string `"false"` was counted as support and a null as contradiction. Each honest direction moves only its own counter: `tests/test_tools.py::TestReportEvidence::test_boolean_supports_moves_only_its_own_counter` (ADR-0012) |
 | Caller can only access their own contexts | API-layer context ownership check ([ADR-0014](docs/adr/0014-context-ownership-validation.md)) | designed, not implemented (R-02) |
 | Lower-authority evidence rejected | WriteGate (hard rule) | in code, `tests/test_poisoning_and_isolation.py::TestAuthorityEnforcement::test_lower_authority_cannot_update_higher` |
 | Rate limit: max 10 evidence events / record / hour | WriteGate — Redis-backed in production ([ADR-0013](docs/adr/0013-distributed-rate-limiting.md)) | in code in-process, `tests/test_gate.py::TestEvidenceUpdate::test_rate_limit_enforced`; Redis-backed: designed, not implemented (R-01) |
@@ -204,7 +205,7 @@ or, in that project's `pyproject.toml`:
 dependencies = ["careful-memory @ git+https://github.com/dermot-r-cochran/careful-memory@v0.1.0"]
 ```
 
-The tag shown is an example: no release is tagged yet, so until one is, put a commit SHA in place of `v0.1.0`.
+`v0.1.0` is the first release tag, made on 18 November 2026. To pin a commit between releases, put its SHA in place of `v0.1.0`.
 
 ### Using it
 
@@ -376,7 +377,7 @@ mypy src
 
 ### Test Coverage
 
-228 tests across 12 files:
+230 tests across 12 files:
 
 ```
 tests/test_allocation.py        — Conserved-mass salience allocation (38 tests)
@@ -390,7 +391,7 @@ tests/test_poisoning_and_isolation.py — Memory poisoning defences + isolation 
 tests/test_prompt.py            — Inference-time prompt assembly (13 tests)
 tests/test_reviewer.py          — MemoryReviewer decisions (17 tests)
 tests/test_service.py           — MemoryService platform paths + the README Quick Start as printed (23 tests)
-tests/test_tools.py             — Agent tool dispatch + the three-tool surface of ADR-0012 (24 tests)
+tests/test_tools.py             — Agent tool dispatch + the three-tool surface of ADR-0012 (26 tests)
 ```
 
 ---
